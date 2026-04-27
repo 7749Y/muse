@@ -3,11 +3,13 @@ package com.example.muse.ui.screen.home
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,7 +19,9 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -67,8 +71,8 @@ fun HomeScreen(
             // Search bar
             SearchBarSection(modifier = Modifier.padding(vertical = 20.dp))
 
-            // Bottom section placeholder
-            Spacer(modifier = Modifier.height(240.dp))
+            // Bottom frame
+            BottomFrameSection()
         }
 
         // Settings icon
@@ -93,6 +97,7 @@ private fun WordCloudSection(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .padding(12.dp)
     ) {
         Text(
@@ -126,6 +131,82 @@ private fun SearchBarSection(modifier: Modifier = Modifier) {
             contentDescription = "Search",
             tint = Color.White.copy(alpha = 0.4f),
             modifier = Modifier.size(16.dp)
+        )
+    }
+}
+
+@Composable
+private fun BottomFrameSection(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .padding(start = 36.dp, end = 62.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left card
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "GitHub同款\ncontributions\n（待办）",
+                fontFamily = FontFamily.Monospace,
+                fontSize = 15.sp,
+                color = Color.White,
+                lineHeight = 20.sp
+            )
+        }
+
+        // Right tag column
+        Column(
+            modifier = Modifier
+                .width(120.dp)
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            TagButton(text = "tag1")
+            TagButton(text = "tag2")
+            AddTagButton()
+        }
+    }
+}
+
+@Composable
+private fun TagButton(text: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 16.sp,
+            color = Color(0xFFB3B3B3)
+        )
+    }
+}
+
+@Composable
+private fun AddTagButton() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Add,
+            contentDescription = "Add tag",
+            tint = Color(0xFFB3B3B3)
         )
     }
 }
