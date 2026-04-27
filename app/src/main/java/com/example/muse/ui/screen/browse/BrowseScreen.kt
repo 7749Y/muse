@@ -56,7 +56,7 @@ fun BrowseScreen(
                     modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_back),
+                        painter = painterResource(R.drawable.ic_home),
                         contentDescription = "Back",
                         tint = Color.White
                     )
@@ -79,6 +79,7 @@ fun BrowseScreen(
                     Icon(
                         painter = painterResource(R.drawable.ic_search),
                         contentDescription = "Search",
+                        modifier = Modifier.size(30.dp),
                         tint = Color.White
                     )
                 }
@@ -105,11 +106,12 @@ fun BrowseScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 41.dp, bottom = 94.dp)
-                .size(48.dp)
+                .size(48.dp),
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_edit),
                 contentDescription = "Edit",
+                modifier = Modifier.size(36.dp),
                 tint = Color.White
             )
         }
