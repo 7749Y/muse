@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.muse.R
 import com.example.muse.ui.theme.MuseTheme
-
+//主页UI完成
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier
