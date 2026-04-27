@@ -2,8 +2,10 @@ package com.example.muse.ui.screen.home
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,8 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,8 +64,11 @@ fun HomeScreen(
             // Word cloud (stretches to fill available space)
             WordCloudSection(modifier = Modifier.weight(1f))
 
+            // Search bar
+            SearchBarSection(modifier = Modifier.padding(vertical = 20.dp))
+
             // Bottom section placeholder
-            Spacer(modifier = Modifier.height(300.dp))
+            Spacer(modifier = Modifier.height(240.dp))
         }
 
         // Settings icon
@@ -85,13 +93,39 @@ private fun WordCloudSection(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(24.dp)
+            .padding(12.dp)
     ) {
         Text(
             text = "云图（待办）",
             fontFamily = FontFamily.Monospace,
             fontSize = 16.sp,
             color = Color.White
+        )
+    }
+}
+
+@Composable
+private fun SearchBarSection(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 36.dp)
+            .border(1.dp, Color(0xFF444444), CircleShape)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "=￣ω￣=",
+            modifier = Modifier.weight(1f),
+            fontSize = 16.sp,
+            color = Color.White.copy(alpha = 0.4f)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = "Search",
+            tint = Color.White.copy(alpha = 0.4f),
+            modifier = Modifier.size(16.dp)
         )
     }
 }
