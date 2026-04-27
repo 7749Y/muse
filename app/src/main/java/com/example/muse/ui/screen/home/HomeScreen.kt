@@ -20,11 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -36,8 +31,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.muse.R
 import com.example.muse.ui.theme.MuseTheme
 
 @Composable
@@ -85,7 +82,7 @@ fun HomeScreen(
                 .size(36.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Settings,
+                painter = painterResource(R.drawable.ic_settings),
                 contentDescription = "Settings",
                 tint = Color.White
             )
@@ -100,7 +97,7 @@ fun HomeScreen(
                 .size(48.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Edit,
+                painter = painterResource(R.drawable.ic_edit),
                 contentDescription = "Edit",
                 tint = Color.White
             )
@@ -143,9 +140,9 @@ private fun SearchBarSection(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Icon(
-            imageVector = Icons.Default.Search,
+            painter = painterResource(R.drawable.ic_search),
             contentDescription = "Search",
-            tint = Color.White.copy(alpha = 0.4f),
+            tint = Color.White,
             modifier = Modifier.size(16.dp)
         )
     }
@@ -220,7 +217,7 @@ private fun AddTagButton() {
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Add,
+            painter = painterResource(R.drawable.ic_add),
             contentDescription = "Add tag",
             tint = Color(0xFFB3B3B3)
         )
