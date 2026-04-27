@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -89,6 +90,21 @@ fun HomeScreen(
                 tint = Color.White
             )
         }
+
+        // Edit button (floating)
+        IconButton(
+            onClick = { /* TODO */ },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 37.dp, bottom = 94.dp)
+                .size(48.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Edit",
+                tint = Color.White
+            )
+        }
     }
 }
 
@@ -140,7 +156,7 @@ private fun BottomFrameSection(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(240.dp)
             .padding(start = 36.dp, end = 62.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
