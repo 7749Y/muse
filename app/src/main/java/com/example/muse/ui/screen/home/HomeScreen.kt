@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,8 +56,8 @@ fun HomeScreen(
                 letterSpacing = (-2).sp
             )
 
-            // Middle content placeholder
-            Spacer(modifier = Modifier.weight(1f))
+            // Word cloud (stretches to fill available space)
+            WordCloudSection(modifier = Modifier.weight(1f))
 
             // Bottom section placeholder
             Spacer(modifier = Modifier.height(300.dp))
@@ -76,6 +77,22 @@ fun HomeScreen(
                 tint = Color.White
             )
         }
+    }
+}
+
+@Composable
+private fun WordCloudSection(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+    ) {
+        Text(
+            text = "云图（待办）",
+            fontFamily = FontFamily.Monospace,
+            fontSize = 16.sp,
+            color = Color.White
+        )
     }
 }
 
