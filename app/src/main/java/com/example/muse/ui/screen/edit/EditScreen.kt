@@ -131,27 +131,13 @@ fun EditScreen(
                     }
                 }
             }
-
         }
-    }
-}
 
-@Preview(
-    showBackground = true,
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-    backgroundColor = 0xFF1E1E1E
-)
-@Composable
-private fun EditScreenPreview() {
-    MuseTheme(darkTheme = true) {
-        val moduleMenuShape = RoundedCornerShape(
-            topStart = 100.dp,
-            topEnd = 100.dp,
-            bottomEnd = 100.dp,
-            bottomStart = 100.dp
-        )
+        // Module menu button (floating)
+        val moduleMenuShape = RoundedCornerShape(100.dp)
         Box(
             modifier = Modifier
+                .align(Alignment.BottomEnd)
                 .padding(end = 37.dp, bottom = 94.dp)
                 .size(48.dp)
                 .clip(moduleMenuShape)
@@ -166,5 +152,17 @@ private fun EditScreenPreview() {
                 modifier = Modifier.size(24.dp)
             )
         }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    backgroundColor = 0xFF1E1E1E
+)
+@Composable
+private fun EditScreenPreview() {
+    MuseTheme(darkTheme = true) {
+        EditScreen()
     }
 }
