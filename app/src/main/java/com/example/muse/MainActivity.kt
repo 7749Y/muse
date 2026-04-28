@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.example.muse.ui.screen.browse.BrowseScreen
+import com.example.muse.ui.screen.edit.EditScreen
 import com.example.muse.ui.screen.home.HomeScreen
 import com.example.muse.ui.theme.MuseTheme
 
@@ -14,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MuseTheme(darkTheme = true) {
-                BrowseScreen()
+                EditScreen()
             }
         }
     }
