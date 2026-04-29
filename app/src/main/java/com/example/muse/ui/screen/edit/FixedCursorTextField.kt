@@ -101,14 +101,9 @@ fun FixedCursorTextField(
         val targetScroll = cursorRect.top - containerHeightPx / 2f + cursorRect.height / 2f
         val textHeight = r.size.height.toFloat()
 
-        // 顶部留白限制向下滚动，底部留白限制向上滚动
-        val totalH = topPaddingPx + textHeight + bottomPaddingPx
-        val minScroll = if (totalH < containerHeightPx) {
-            -(containerHeightPx - totalH) / 2f
-        } else {
-            -topPaddingPx
-        }
-        val maxScroll = max(0f, textHeight + bottomPaddingPx - containerHeightPx)
+        // 允许滚动范围涵盖从「只显示顶部留白」到「只显示底部留白」的所有位置
+        val minScroll = minOf(-topPaddingPx, textHeight + bottomPaddingPx - containerHeightPx)
+        val maxScroll = maxOf(-topPaddingPx, textHeight + bottomPaddingPx - containerHeightPx)
 
         scrollOffsetPx = targetScroll.coerceIn(minScroll, maxScroll)
     }
