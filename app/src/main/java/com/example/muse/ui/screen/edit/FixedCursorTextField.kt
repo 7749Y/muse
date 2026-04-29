@@ -131,7 +131,7 @@ fun FixedCursorTextField(
                     .focusRequester(focusRequester)
                     .onFocusChanged { isFocused = it.isFocused }
                     .drawWithContent { /* 隐藏绘制 */ },
-                textStyle = TextStyle(color = Color.White),
+                textStyle = textStyle,
                 cursorBrush = SolidColor(Color.Transparent),
                 decorationBox = { inner -> inner() }
             )
@@ -145,10 +145,10 @@ fun FixedCursorTextField(
 
             // 修复：即便 textLayoutResult 为 null，也尝试绘制占位符
             if (r == null) {
-                if (placeholderText != null && !isFocused) {
+                if (placeholderText != null && value.text.isEmpty()) {
                     val phLayout = textMeasurer.measure(
                         text = placeholderText,
-                        style = textStyle.copy(color = Color.Gray),
+                        style = textStyle.copy(color = textStyle.color.copy()),
                         constraints = Constraints(maxWidth = size.width.roundToInt())
                     )
                     drawText(phLayout, topLeft = Offset(0f, -scrollOffsetPx))
@@ -169,11 +169,11 @@ fun FixedCursorTextField(
                 )
                 // 文本内容
                 drawText(r, topLeft = Offset(0f, -scrollOffsetPx))
-            } else if (placeholderText != null && !isFocused) {
+            } else if (placeholderText != null) {
                 // 空文本时绘制占位符
                 val phLayout = textMeasurer.measure(
                     text = placeholderText,
-                    style = textStyle.copy(color = Color.Gray),
+                    style = textStyle.copy(color = textStyle.color.copy(alpha = 0.5F)),
                     constraints = Constraints(maxWidth = size.width.roundToInt())
                 )
                 drawText(phLayout, topLeft = Offset(0f, -scrollOffsetPx))
