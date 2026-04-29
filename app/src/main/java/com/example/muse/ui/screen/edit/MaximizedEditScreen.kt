@@ -147,19 +147,21 @@ fun MaximizedEditScreen(
                 }
             }
 
-            // Edit area — with bottom padding = keyboard height
+            // Edit area — centered when keyboard is open, bottom padding = keyboard height
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 41.dp, vertical = 35.dp)
-                    .padding(bottom = keyboardHeightDp)
+                    .padding(horizontal = 41.dp)
+                    .padding(top = if (isKeyboardOpen) 0.dp else 35.dp)
+                    .padding(bottom = keyboardHeightDp),
+                contentAlignment = if (isKeyboardOpen) Alignment.Center else Alignment.TopCenter
             ) {
                 BasicTextField(
                     value = text,
                     onValueChange = { text = it },
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
                         .focusRequester(focusRequester),
                     textStyle = TextStyle(
                         color = Color.White,
@@ -168,7 +170,7 @@ fun MaximizedEditScreen(
                     ),
                     cursorBrush = SolidColor(Color.White),
                     decorationBox = { innerTextField ->
-                        Box {
+                        Box(modifier = Modifier.fillMaxWidth()) {
                             if (text.isEmpty()) {
                                 Text(
                                     text = "段落",
