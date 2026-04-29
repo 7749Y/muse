@@ -245,8 +245,8 @@ fun FixedCursorTextField(
                                         0f
                                     val maxSc = max(0f, totalH - containerHeightPx)
 
-                                    // 修复：滚动方向（手指向下移动时 scrollOffset 应增大，看到下面内容）
-                                    scrollOffsetPx = (scrollOffsetPx + delta.y).coerceIn(minSc, maxSc)
+                                    // 修复：滚动方向
+                                    scrollOffsetPx = (scrollOffsetPx - delta.y).coerceIn(minSc, maxSc)
                                 }
                             }
                         }
