@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.text.TextLayoutResult
@@ -161,9 +160,25 @@ fun FixedCursorTextField(
 
         // Layer 2: 自定义 Canvas 绘制（文本、行高亮、光标）
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val r = textLayoutResult
-            val cursorPos = value.selection.start
-            val hasText = value.text.isNotEmpty()
+            val r = textLayoutResult ?: return@Canvas
+            val cursorPos = value.selection.start.coerceIn(0, value.text.length)
+
+            // ✅ 获取光标所在段落的所有视觉行
+            val paragraphLines = if (value.text.isNotEmpty()) {
+                r.getParagraphLines(cursorPos)
+            } else {
+                IntRange.EMPTY
+            }
+            // 绘制段落高亮（所有行合并为一个矩形，或者逐行绘制）
+            for (line in paragraphLines) {
+                val lineTop = r.getLineTop(line)
+                val lineBottom = r.getLineBottom(line)
+                drawRect(
+                    color = Color(0xFF444444),
+                    topLeft = Offset(0f, lineTop - scrollOffsetPx),
+                    size = Size(size.width, lineBottom - lineTop)
+                )
+            }
 
             // 修复：即便 textLayoutResult 为 null，也尝试绘制占位符
             if (r == null) {
@@ -179,17 +194,7 @@ fun FixedCursorTextField(
             }
 
             // 以下正常绘制
-            if (hasText) {
-                // 当前行高亮
-                val line = r.getLineForOffset(cursorPos)
-                val lineTop = r.getLineTop(line)
-                val lineBottom = r.getLineBottom(line)
-                drawRect(
-                    color = Color(0xFF444444),
-                    topLeft = Offset(0f, lineTop - scrollOffsetPx),
-                    size = Size(size.width, lineBottom - lineTop)
-                )
-                // 文本内容
+            if (value.text.isNotEmpty()) {
                 drawText(r, topLeft = Offset(0f, -scrollOffsetPx))
             } else if (placeholderText != null) {
                 // 空文本时绘制占位符
@@ -297,4 +302,33 @@ fun FixedCursorTextField(
                 }
         )
     }
+}
+
+
+//判断某视觉行结束后是否是段落结束（即遇到 '\n' 或文本结尾）
+private fun TextLayoutResult.isParagraphEnd(line: Int): Boolean {
+    if (line < 0 || line >= lineCount) return true
+    val end = getLineEnd(line)          // 该行结束后的索引
+    val text = layoutInput.text
+    // 如果 end 在有效范围内，且前一个字符是换行符，则该行是段落结尾
+    if (end > 0 && end <= text.length && text[end - 1] == '\n') return true
+    // 如果 end 等于文本长度，说明是最后一行，也视为段落结尾
+    return end >= text.length
+}
+
+//获取光标所在段落的所有视觉行索引（闭区间）
+private fun TextLayoutResult.getParagraphLines(offset: Int): IntRange {
+    // 1. 定位光标所在的视觉行
+    val cursorLine = getLineForOffset(offset.coerceIn(0, layoutInput.text.length))
+    // 2. 向前查找段落起点
+    var startLine = cursorLine
+    while (startLine > 0 && !isParagraphEnd(startLine - 1)) {
+        startLine--
+    }
+    // 3. 向后查找段落终点
+    var endLine = cursorLine
+    while (endLine < lineCount - 1 && !isParagraphEnd(endLine)) {
+        endLine++
+    }
+    return startLine..endLine
 }
