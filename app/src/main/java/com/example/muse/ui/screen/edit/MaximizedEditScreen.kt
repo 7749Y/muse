@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -34,23 +33,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -155,47 +145,31 @@ fun MaximizedEditScreen(
                 }
             }
 
-            // Edit area — centered when keyboard is open, bottom padding = keyboard height
+            // Edit area — padding bottom = keyboard height when open
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 41.dp)
                     .padding(top = if (isKeyboardOpen) 0.dp else 35.dp)
-                    .padding(bottom = keyboardHeightDp),
-                contentAlignment = if (isKeyboardOpen) Alignment.Center else Alignment.TopCenter
+                    .padding(bottom = keyboardHeightDp)
             ) {
-                BasicTextField(
+                FixedCursorTextField(
                     value = tfValue,
                     onValueChange = { tfValue = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester),
+                    modifier = Modifier.fillMaxWidth(),
+                    focusRequester = focusRequester,
                     textStyle = TextStyle(
                         color = Color.White,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
-                    cursorBrush = SolidColor(Color.White),
-                    visualTransformation = CursorLineHighlight(tfValue.selection.start),
-                    decorationBox = { innerTextField ->
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            if (tfValue.text.isEmpty()) {
-                                Text(
-                                    text = "段落",
-                                    color = Color.Gray,
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            innerTextField()
-                        }
-                    }
+                    placeholderText = if (tfValue.text.isEmpty()) "段落" else null
                 )
             }
         }
 
-        // "完成" button — only when keyboard is open, positioned above it
+        // "完成" button — only when keyboard is open
         AnimatedVisibility(
             visible = isKeyboardOpen,
             enter = fadeIn(),
@@ -222,28 +196,6 @@ fun MaximizedEditScreen(
     // Autofocus on first composition to open keyboard
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
-    }
-}
-
-private class CursorLineHighlight(private val cursor: Int) : VisualTransformation {
-    override fun filter(text: AnnotatedString): TransformedText {
-        if (text.isEmpty()) return TransformedText(text, OffsetMapping.Identity)
-        val start = text.text.lastIndexOf('\n', cursor - 1) + 1
-        val end = text.text.indexOf('\n', cursor).let { if (it == -1) text.length else it + 1 }
-        return TransformedText(
-            buildAnnotatedString {
-                if (start > 0) {
-                    append(text.substring(0, start))
-                }
-                withStyle(SpanStyle(background = Color(0xFF444444))) {
-                    append(text.substring(start, end))
-                }
-                if (end < text.length) {
-                    append(text.substring(end))
-                }
-            },
-            OffsetMapping.Identity
-        )
     }
 }
 
