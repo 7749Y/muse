@@ -3,7 +3,11 @@ package com.example.muse.ui.screen.edit
 import android.view.ViewConfiguration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.runtime.*
@@ -29,12 +33,12 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FixedCursorTextField(
     value: TextFieldValue,
@@ -44,6 +48,7 @@ fun FixedCursorTextField(
     textStyle: TextStyle = TextStyle.Default,
     placeholderText: String? = null,
 ) {
+    val isImeVisible = WindowInsets.isImeVisible
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     var containerHeightPx by remember { mutableStateOf(0f) }
     var scrollOffsetPx by remember { mutableStateOf(0f) }
@@ -94,8 +99,16 @@ fun FixedCursorTextField(
     }
 
     // 将 topPaddingPx 加入依赖，自动居中逻辑也会适配新的上下留白
-    LaunchedEffect(textLayoutResult, value.selection, isDragging, containerHeightPx, topPaddingPx, bottomPaddingPx) {
-        if (isDragging || textLayoutResult == null || containerHeightPx <= 0f) return@LaunchedEffect
+    LaunchedEffect(
+        textLayoutResult,
+        value.selection,
+        isDragging,
+        isImeVisible,
+        containerHeightPx,
+        topPaddingPx,
+        bottomPaddingPx
+    ) {
+        if (!isImeVisible || isDragging || textLayoutResult == null || containerHeightPx <= 0f) return@LaunchedEffect
         val r = textLayoutResult!!
         val cursorRect = r.getCursorRect(value.selection.start)
         val targetScroll = cursorRect.top - containerHeightPx / 2f + cursorRect.height / 2f
@@ -106,6 +119,20 @@ fun FixedCursorTextField(
         val maxScroll = maxOf(-topPaddingPx, textHeight + bottomPaddingPx - containerHeightPx)
 
         scrollOffsetPx = targetScroll.coerceIn(minScroll, maxScroll)
+    }
+
+    LaunchedEffect(isImeVisible) {
+        if (isImeVisible && !isDragging) {
+            // 手动触发一次居中（复用原有居中逻辑）
+            val r = textLayoutResult ?: return@LaunchedEffect
+            val cursorRect = r.getCursorRect(value.selection.start)
+            val targetScroll = cursorRect.top - containerHeightPx / 2f + cursorRect.height / 2f
+            val textHeight = r.size.height.toFloat()
+            val totalH = topPaddingPx + textHeight + bottomPaddingPx
+            val minScroll = if (totalH < containerHeightPx) -(containerHeightPx - totalH) / 2f else -topPaddingPx
+            val maxScroll = max(0f, textHeight + bottomPaddingPx - containerHeightPx)
+            scrollOffsetPx = targetScroll.coerceIn(minScroll, maxScroll)
+        }
     }
 
     val currentValue by rememberUpdatedState(value)
@@ -215,7 +242,8 @@ fun FixedCursorTextField(
                                     if (!drag) {
                                         // 点击：设置光标到点击位置
                                         textLayoutResult?.let { r ->
-                                            val tapX = mch.position.x.coerceIn(0f, r.size.width.toFloat())
+                                            val tapX =
+                                                mch.position.x.coerceIn(0f, r.size.width.toFloat())
                                             val tapY = (mch.position.y + scrollOffsetPx)
                                                 .coerceIn(0f, r.size.height.toFloat())
                                             r.getOffsetForPosition(Offset(tapX, tapY))
@@ -248,7 +276,8 @@ fun FixedCursorTextField(
                                 }
 
                                 if (drag) {
-                                    val textH = textLayoutResult?.size?.height?.toFloat() ?: continue
+                                    val textH =
+                                        textLayoutResult?.size?.height?.toFloat() ?: continue
                                     // 应用顶部/底部留白限制
                                     val totalH = topPaddingPx + textH + bottomPaddingPx
                                     val minSc = if (totalH < containerHeightPx) {
@@ -259,7 +288,8 @@ fun FixedCursorTextField(
                                     val maxSc = max(0f, textH + bottomPaddingPx - containerHeightPx)
 
                                     // 修复：滚动方向
-                                    scrollOffsetPx = (scrollOffsetPx - delta.y).coerceIn(minSc, maxSc)
+                                    scrollOffsetPx =
+                                        (scrollOffsetPx - delta.y).coerceIn(minSc, maxSc)
                                 }
                             }
                         }
