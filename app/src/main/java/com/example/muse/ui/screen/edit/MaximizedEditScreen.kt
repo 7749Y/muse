@@ -1,7 +1,13 @@
 package com.example.muse.ui.screen.edit
 
 import android.content.res.Configuration
+import android.graphics.Rect
+import android.view.ViewTreeObserver
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,11 +19,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,11 +37,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.muse.R
@@ -49,6 +60,31 @@ fun MaximizedEditScreen(
     var text by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
+    val density = LocalDensity.current
+    val view = LocalView.current
+    var keyboardHeightDp by remember { mutableStateOf(0.dp) }
+    var isKeyboardOpen by remember { mutableStateOf(false) }
+
+    // Detect keyboard open/close via ViewTreeObserver
+    DisposableEffect(view) {
+        val listener = ViewTreeObserver.OnGlobalLayoutListener {
+            val rect = Rect()
+            view.getWindowVisibleDisplayFrame(rect)
+            val screenHeight = view.rootView.height
+            val keypadHeight = screenHeight - rect.bottom
+            val visible = keypadHeight > screenHeight * 0.15
+            isKeyboardOpen = visible
+            keyboardHeightDp = with(density) { keypadHeight.toDp() }
+        }
+        view.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        onDispose {
+            view.viewTreeObserver.removeOnGlobalLayoutListener(listener)
+        }
+    }
+
+    val navBarHeight = if (isKeyboardOpen) 22.dp else 44.dp
+    val titleFontSize = if (isKeyboardOpen) 12.sp else 24.sp
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -58,53 +94,66 @@ fun MaximizedEditScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Navigation bar
+            // Navigation bar — shrinks when keyboard opens
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(navBarHeight)
                     .padding(end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier.size(44.dp)
+                AnimatedVisibility(
+                    visible = !isKeyboardOpen,
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_back),
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_back),
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
+                    }
                 }
 
                 Text(
                     text = title,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
-                    fontSize = 24.sp,
+                    fontSize = titleFontSize,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                     letterSpacing = (-0.48).sp
                 )
 
-                IconButton(
-                    onClick = onDoneClick,
-                    modifier = Modifier.size(44.dp)
+                AnimatedVisibility(
+                    visible = !isKeyboardOpen,
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_check),
-                        contentDescription = "Done",
-                        tint = Color.White
-                    )
+                    IconButton(
+                        onClick = onDoneClick,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_check),
+                            contentDescription = "Done",
+                            tint = Color.White
+                        )
+                    }
                 }
             }
 
-            // Edit area
+            // Edit area — with bottom padding = keyboard height
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 41.dp, vertical = 35.dp)
+                    .padding(bottom = keyboardHeightDp)
             ) {
                 BasicTextField(
                     value = text,
@@ -131,6 +180,29 @@ fun MaximizedEditScreen(
                             innerTextField()
                         }
                     }
+                )
+            }
+        }
+
+        // "完成" button — only when keyboard is open, positioned above it
+        AnimatedVisibility(
+            visible = isKeyboardOpen,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 37.dp, bottom = keyboardHeightDp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .border(1.dp, Color(0xFF949494), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "完成",
+                    color = Color.White,
+                    fontSize = 14.sp
                 )
             }
         }
