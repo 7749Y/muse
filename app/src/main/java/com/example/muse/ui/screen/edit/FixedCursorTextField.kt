@@ -68,6 +68,15 @@ fun FixedCursorTextField(
         }
     }
 
+    // 顶部留白（与底部留白对称）
+    val topPaddingPx = remember(lineHeightPx, containerHeightPx) {
+        if (lineHeightPx > 0f && containerHeightPx > 0f) {
+            (containerHeightPx - lineHeightPx).coerceAtLeast(0f)
+        } else {
+            containerHeightPx
+        }
+    }
+
     // 更新行高（基于第一行）
     LaunchedEffect(textLayoutResult) {
         textLayoutResult?.let { r ->
@@ -84,19 +93,27 @@ fun FixedCursorTextField(
         while (true) { delay(530); cursorVisible = !cursorVisible }
     }
 
-    // 自动居中光标（当选区变化时，但排除手动拖拽期间）
-    LaunchedEffect(textLayoutResult, value.selection, isDragging, containerHeightPx, bottomPaddingPx) {
+    // 将 topPaddingPx 加入依赖，自动居中逻辑也会适配新的上下留白
+    LaunchedEffect(textLayoutResult, value.selection, isDragging, containerHeightPx, topPaddingPx, bottomPaddingPx) {
         if (isDragging || textLayoutResult == null || containerHeightPx <= 0f) return@LaunchedEffect
         val r = textLayoutResult!!
         val cursorRect = r.getCursorRect(value.selection.start)
         val targetScroll = cursorRect.top - containerHeightPx / 2f + cursorRect.height / 2f
         val textHeight = r.size.height.toFloat()
-        val totalHeight = textHeight + bottomPaddingPx
-        // 修正 minScroll/maxScroll 包含底部留白
-        val minScroll = if (totalHeight < containerHeightPx) -(containerHeightPx - totalHeight) / 2f else 0f
-        val maxScroll = max(0f, totalHeight - containerHeightPx)
+
+        // 顶部留白限制向下滚动，底部留白限制向上滚动
+        val totalH = topPaddingPx + textHeight + bottomPaddingPx
+        val minScroll = if (totalH < containerHeightPx) {
+            -(containerHeightPx - totalH) / 2f
+        } else {
+            -topPaddingPx
+        }
+        val maxScroll = max(0f, textHeight + bottomPaddingPx - containerHeightPx)
+
         scrollOffsetPx = targetScroll.coerceIn(minScroll, maxScroll)
     }
+
+    val currentValue by rememberUpdatedState(value)
 
     Box(modifier = modifier.clip(RoundedCornerShape(0.dp))) {
         // Layer 1: 隐藏的 BasicTextField —— 仅负责IME输入
@@ -174,7 +191,6 @@ fun FixedCursorTextField(
         }
 
         // Layer 3: 触摸处理（点击选光标、拖拽滚动）
-        val currentValue by rememberUpdatedState(value)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -238,12 +254,14 @@ fun FixedCursorTextField(
 
                                 if (drag) {
                                     val textH = textLayoutResult?.size?.height?.toFloat() ?: continue
-                                    val totalH = textH + bottomPaddingPx
-                                    val minSc = if (totalH < containerHeightPx)
+                                    // 应用顶部/底部留白限制
+                                    val totalH = topPaddingPx + textH + bottomPaddingPx
+                                    val minSc = if (totalH < containerHeightPx) {
                                         -(containerHeightPx - totalH) / 2f
-                                    else
-                                        0f
-                                    val maxSc = max(0f, totalH - containerHeightPx)
+                                    } else {
+                                        -topPaddingPx
+                                    }
+                                    val maxSc = max(0f, textH + bottomPaddingPx - containerHeightPx)
 
                                     // 修复：滚动方向
                                     scrollOffsetPx = (scrollOffsetPx - delta.y).coerceIn(minSc, maxSc)
