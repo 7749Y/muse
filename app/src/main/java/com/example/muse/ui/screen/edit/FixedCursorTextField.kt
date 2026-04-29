@@ -174,6 +174,7 @@ fun FixedCursorTextField(
         }
 
         // Layer 3: 触摸处理（点击选光标、拖拽滚动）
+        val currentValue by rememberUpdatedState(value)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -210,7 +211,7 @@ fun FixedCursorTextField(
                                                 .takeIf { it != -1 }
                                                 ?.let { off ->
                                                     onValueChange(
-                                                        value.copy(selection = TextRange(off))
+                                                        currentValue.copy(selection = TextRange(off))
                                                     )
                                                 }
                                         }
