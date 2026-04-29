@@ -191,6 +191,33 @@ fun MaximizedEditScreen(
                 )
             }
         }
+        // Keyboard open button — only when keyboard is closed
+        AnimatedVisibility(
+            visible = !isKeyboardOpen,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 37.dp, bottom = 22.dp)
+        ) {
+            IconButton(
+                onClick = { focusRequester.requestFocus() },
+                modifier = Modifier
+                    .border(
+                        1.dp, Color(0xFF949494), RoundedCornerShape(8.dp)
+                    )
+                    .size(40.dp)
+            ) {
+                Icon(
+                    painter = painterResource(
+                        R.drawable.ic_add
+                    ),
+                    contentDescription = "打开键盘",
+                    tint = Color.White
+                )
+            }
+        }
+
     }
 
     // Autofocus on first composition to open keyboard
