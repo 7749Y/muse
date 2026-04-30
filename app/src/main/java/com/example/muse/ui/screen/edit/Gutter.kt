@@ -14,6 +14,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.max
@@ -27,7 +28,9 @@ fun Gutter(
     containerHeightPx: Float,
     textStyle: TextStyle,
     modifier: Modifier = Modifier,
-    lineTextSpacingPx: Float = 8f
+    lineTextSpacingPx: Float = 8f,
+    fixedWidth: Dp? = null,             // 固定列宽，null = 自适应
+    centerContent: Boolean = true       // 是否在列内水平居中（默认居中）
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
@@ -37,6 +40,9 @@ fun Gutter(
         fontSize = textStyle.fontSize * 0.8f
     )
 
+    // 计算固定列宽的像素值
+    val fixedWidthPx = fixedWidth?.let { with(density) { it.toPx() } }
+
     val maxNumberString = remember(totalLines) {
         totalLines.toString()
     }
@@ -44,10 +50,11 @@ fun Gutter(
     val bulletWidth = textMeasurer.measure("•", gutterStyle).size.width
     val quoteLineWidth = with(density) { 4.dp.toPx() }
 
-    val columnWidth = remember(totalLines) {
-        val maxContentWidth = maxNumWidth.toFloat().coerceAtLeast(bulletWidth.toFloat()).coerceAtLeast(quoteLineWidth)
-        maxContentWidth + with(density) { 16.dp.toPx() }
-    }
+    val columnWidth = fixedWidthPx
+        ?: remember(totalLines) {
+            val maxContentWidth = maxNumWidth.toFloat().coerceAtLeast(bulletWidth.toFloat()).coerceAtLeast(quoteLineWidth)
+            maxContentWidth + with(density) { 16.dp.toPx() }
+        }
 
     Canvas(
         modifier = modifier
@@ -59,49 +66,47 @@ fun Gutter(
             if (top + lineHeightPx < 0 || top > containerHeightPx) continue
 
             val item = itemProvider(line)
-            when (item) {
-                GutterItem.None -> { /* 不绘制 */ }
-                is GutterItem.Number -> {
-                    val numText = item.number.toString()
-                    val numLayout = textMeasurer.measure(numText, gutterStyle)
-                    drawText(
-                        numLayout,
-                        topLeft = Offset(
-                            columnWidth - numLayout.size.width - with(density) { 8.dp.toPx() },
-                            top
-                        )
-                    )
+            // 准备要绘制的文本和是否需要缩放
+            val (textToDraw, isQuote) = when (item) {
+                GutterItem.None -> continue
+                is GutterItem.Number -> item.number.toString() to false
+                GutterItem.Bullet -> "•" to false
+                is GutterItem.OrderedNumber -> "${item.number}." to false
+                GutterItem.QuoteLine -> "│" to true  // 用字符绘制竖线
+            }
+
+            if (isQuote) {
+                // 竖线仍旧使用 drawLine，居中绘制
+                val lineX = columnWidth / 2f
+                drawLine(
+                    Color.Gray,
+                    Offset(lineX, top),
+                    Offset(lineX, top + lineHeightPx),
+                    strokeWidth = 4.dp.toPx()
+                )
+            } else {
+                // 自动缩放字号以适应固定宽度
+                val textWidth = if (fixedWidthPx != null) {
+                    // 先用原始字号测量
+                    var style = gutterStyle
+                    var layout = textMeasurer.measure(textToDraw, style)
+                    // 如果超出列宽减去边距，则缩小字号再测
+                    val maxFitWidth = columnWidth - with(density) { 8.dp.toPx() } * 2
+                    if (layout.size.width > maxFitWidth) {
+                        val scale = maxFitWidth / layout.size.width
+                        style = gutterStyle.copy(fontSize = gutterStyle.fontSize * scale)
+                        layout = textMeasurer.measure(textToDraw, style)
+                    }
+                    layout
+                } else {
+                    textMeasurer.measure(textToDraw, gutterStyle)
                 }
-                GutterItem.Bullet -> {
-                    val bulletLayout = textMeasurer.measure("•", gutterStyle)
-                    drawText(
-                        bulletLayout,
-                        topLeft = Offset(
-                            columnWidth - bulletLayout.size.width - with(density) { 8.dp.toPx() },
-                            top
-                        )
-                    )
+                val x = if (centerContent) {
+                    (columnWidth - textWidth.size.width) / 2f
+                } else {
+                    columnWidth - textWidth.size.width - with(density) { 8.dp.toPx() } // 右对齐
                 }
-                is GutterItem.OrderedNumber -> {
-                    val text = "${item.number}."
-                    val layout = textMeasurer.measure(text, gutterStyle)
-                    drawText(
-                        layout,
-                        topLeft = Offset(
-                            columnWidth - layout.size.width - with(density) { 8.dp.toPx() },
-                            top
-                        )
-                    )
-                }
-                GutterItem.QuoteLine -> {
-                    val lineX = with(density) { 8.dp.toPx() } + quoteLineWidth / 2
-                    drawLine(
-                        color = Color.Gray,
-                        start = Offset(lineX, top),
-                        end = Offset(lineX, top + lineHeightPx),
-                        strokeWidth = quoteLineWidth
-                    )
-                }
+                drawText(textWidth, topLeft = Offset(x, top))
             }
         }
     }

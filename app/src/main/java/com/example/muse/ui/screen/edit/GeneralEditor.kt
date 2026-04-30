@@ -41,13 +41,15 @@ fun GeneralEditor(
         val vm = editorViewModel
         if (vm.textLayoutResult != null && vm.lineHeightPx > 0f) {
             Gutter(
-                itemProvider = gutterProvider,
+                itemProvider = { GutterItem.Number(it + 1) },
                 totalLines = vm.textLayoutResult!!.lineCount,
                 scrollOffsetPx = vm.scrollOffsetPx,
                 lineHeightPx = vm.lineHeightPx,
                 containerHeightPx = vm.containerHeightPx,
                 textStyle = textStyle,
-                modifier = Modifier.fillMaxHeight()
+                modifier = Modifier.fillMaxHeight(),
+                fixedWidth = 40.dp,
+                centerContent = true
             )
         }
 
@@ -79,7 +81,7 @@ private fun GeneralEditorPreview() {
                 .padding(16.dp)
         ) {
             GeneralEditor(
-                value = TextFieldValue(""),
+                value = TextFieldValue("你好\n第二行\n"),
                 onValueChange = { },
                 modifier = Modifier
                     .fillMaxSize()
