@@ -1,0 +1,188 @@
+package com.example.muse.ui.screen.edit
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlin.math.max
+
+@Composable
+fun Gutter(
+    itemProvider: (lineIndex: Int) -> GutterItem,
+    totalLines: Int,
+    scrollOffsetPx: Float,
+    lineHeightPx: Float,
+    containerHeightPx: Float,
+    textStyle: TextStyle,
+    modifier: Modifier = Modifier,
+    lineTextSpacingPx: Float = 8f
+) {
+    val density = LocalDensity.current
+    val textMeasurer = rememberTextMeasurer()
+
+    val gutterStyle = textStyle.copy(
+        color = Color.Gray,
+        fontSize = textStyle.fontSize * 0.8f
+    )
+
+    val maxNumberString = remember(totalLines) {
+        totalLines.toString()
+    }
+    val maxNumWidth = textMeasurer.measure(maxNumberString, gutterStyle).size.width
+    val bulletWidth = textMeasurer.measure("•", gutterStyle).size.width
+    val quoteLineWidth = with(density) { 4.dp.toPx() }
+
+    val columnWidth = remember(totalLines) {
+        val maxContentWidth = maxNumWidth.toFloat().coerceAtLeast(bulletWidth.toFloat()).coerceAtLeast(quoteLineWidth)
+        maxContentWidth + with(density) { 16.dp.toPx() }
+    }
+
+    Canvas(
+        modifier = modifier
+            .width(with(density) { columnWidth.toDp() })
+            .fillMaxHeight()
+    ) {
+        for (line in 0 until totalLines) {
+            val top = line * lineHeightPx - scrollOffsetPx
+            if (top + lineHeightPx < 0 || top > containerHeightPx) continue
+
+            val item = itemProvider(line)
+            when (item) {
+                GutterItem.None -> { /* 不绘制 */ }
+                is GutterItem.Number -> {
+                    val numText = item.number.toString()
+                    val numLayout = textMeasurer.measure(numText, gutterStyle)
+                    drawText(
+                        numLayout,
+                        topLeft = Offset(
+                            columnWidth - numLayout.size.width - with(density) { 8.dp.toPx() },
+                            top
+                        )
+                    )
+                }
+                GutterItem.Bullet -> {
+                    val bulletLayout = textMeasurer.measure("•", gutterStyle)
+                    drawText(
+                        bulletLayout,
+                        topLeft = Offset(
+                            columnWidth - bulletLayout.size.width - with(density) { 8.dp.toPx() },
+                            top
+                        )
+                    )
+                }
+                is GutterItem.OrderedNumber -> {
+                    val text = "${item.number}."
+                    val layout = textMeasurer.measure(text, gutterStyle)
+                    drawText(
+                        layout,
+                        topLeft = Offset(
+                            columnWidth - layout.size.width - with(density) { 8.dp.toPx() },
+                            top
+                        )
+                    )
+                }
+                GutterItem.QuoteLine -> {
+                    val lineX = with(density) { 8.dp.toPx() } + quoteLineWidth / 2
+                    drawLine(
+                        color = Color.Gray,
+                        start = Offset(lineX, top),
+                        end = Offset(lineX, top + lineHeightPx),
+                        strokeWidth = quoteLineWidth
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF1E1E1E)
+@Composable
+private fun GutterPreview_Numbers() {
+    PreviewGutter(
+        provider = { GutterItem.Number(it + 1) },
+        title = "Line Numbers"
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF1E1E1E)
+@Composable
+private fun GutterPreview_Bullets() {
+    PreviewGutter(
+        provider = { GutterItem.Bullet },
+        title = "Bullet List"
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF1E1E1E)
+@Composable
+private fun GutterPreview_OrderedList() {
+    PreviewGutter(
+        provider = { GutterItem.OrderedNumber(it + 1) },
+        title = "Ordered List"
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF1E1E1E)
+@Composable
+private fun GutterPreview_Quotes() {
+    PreviewGutter(
+        provider = { GutterItem.QuoteLine },
+        title = "Quote Lines"
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF1E1E1E)
+@Composable
+private fun GutterPreview_Mixed() {
+    PreviewGutter(
+        provider = { index ->
+            when {
+                index % 5 == 0 -> GutterItem.Number(index + 1)
+                index % 5 == 2 -> GutterItem.Bullet
+                index % 5 == 3 -> GutterItem.OrderedNumber(index + 1)
+                else -> GutterItem.QuoteLine
+            }
+        },
+        title = "Mixed Styles"
+    )
+}
+
+/**
+ * 辅助组件：模拟一个固定高度的容器和滚动偏移，展示装订线效果。
+ */
+@Composable
+private fun PreviewGutter(
+    provider: (Int) -> GutterItem,
+    title: String
+) {
+    val textStyle = TextStyle(
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Normal
+    )
+    val totalLines = 12
+    val lineHeightPx = 24.dp.value * 2f // 模拟行高
+    val containerHeightPx = 300f
+    val scrollOffsetPx = 0f            // 可手动调整测试滚动
+
+    Gutter(
+        itemProvider = provider,
+        totalLines = totalLines,
+        scrollOffsetPx = scrollOffsetPx,
+        lineHeightPx = lineHeightPx,
+        containerHeightPx = containerHeightPx,
+        textStyle = textStyle,
+        modifier = Modifier
+    )
+}
