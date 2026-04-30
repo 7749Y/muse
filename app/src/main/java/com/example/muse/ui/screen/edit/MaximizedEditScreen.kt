@@ -29,7 +29,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -199,8 +201,12 @@ fun MaximizedEditScreen(
                 .align(Alignment.BottomEnd)
                 .padding(end = 37.dp, bottom = 22.dp)
         ) {
+            val keyboardController = LocalSoftwareKeyboardController.current
             IconButton(
-                onClick = { focusRequester.requestFocus() },
+                onClick = {
+                    focusRequester.requestFocus()
+                    keyboardController?.show()
+                },
                 modifier = Modifier
                     .border(
                         1.dp, Color(0xFF949494), RoundedCornerShape(8.dp)
