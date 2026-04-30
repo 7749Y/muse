@@ -149,7 +149,7 @@ fun MaximizedEditScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 5.dp)
+                    .padding(end = 5.dp)
                     .padding(top = if (isKeyboardOpen) 0.dp else 35.dp)
                     .padding(bottom = keyboardHeightDp)
             ) {
