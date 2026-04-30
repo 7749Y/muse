@@ -48,7 +48,7 @@ fun GeneralEditor(
                 containerHeightPx = vm.containerHeightPx,
                 textStyle = textStyle,
                 modifier = Modifier.fillMaxHeight(),
-                fixedWidth = 35.dp,
+                fixedWidth = 30.dp,
                 centerContent = true,
                 textLayoutResult = vm.textLayoutResult,
             )

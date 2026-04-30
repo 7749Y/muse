@@ -55,7 +55,7 @@ fun Gutter(
     val columnWidth = fixedWidthPx
         ?: remember(totalLines) {
             val maxContentWidth = maxNumWidth.toFloat().coerceAtLeast(bulletWidth.toFloat()).coerceAtLeast(quoteLineWidth)
-            maxContentWidth + with(density) { 16.dp.toPx() }
+            maxContentWidth + with(density) { 0.dp.toPx() }
         }
 
     Canvas(
@@ -116,9 +116,10 @@ fun Gutter(
                 val x = if (centerContent) {
                     (columnWidth - textWidth.size.width) / 2f
                 } else {
-                    columnWidth - textWidth.size.width - with(density) { 8.dp.toPx() } // 右对齐
+                    columnWidth - textWidth.size.width - with(density) { 0.dp.toPx() } // 右对齐
                 }
-                drawText(textWidth, topLeft = Offset(x, top))
+                val y = top + (lineH - textWidth.size.height) / 2f // 垂直居中
+                drawText(textWidth, topLeft = Offset(x, y))
             }
         }
     }
