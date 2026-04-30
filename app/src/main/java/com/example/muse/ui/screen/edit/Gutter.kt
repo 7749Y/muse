@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -30,7 +31,8 @@ fun Gutter(
     modifier: Modifier = Modifier,
     lineTextSpacingPx: Float = 8f,
     fixedWidth: Dp? = null,             // 固定列宽，null = 自适应
-    centerContent: Boolean = true       // 是否在列内水平居中（默认居中）
+    centerContent: Boolean = true,      // 是否在列内水平居中（默认居中）
+    textLayoutResult: TextLayoutResult? = null,  // 精确行位置，null 时用 lineHeightPx 推算
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
@@ -62,8 +64,18 @@ fun Gutter(
             .fillMaxHeight()
     ) {
         for (line in 0 until totalLines) {
-            val top = line * lineHeightPx - scrollOffsetPx
-            if (top + lineHeightPx < 0 || top > containerHeightPx) continue
+            val useLayout = textLayoutResult != null && line < textLayoutResult.lineCount
+            val lineH = if (useLayout) {
+                textLayoutResult.getLineBottom(line) - textLayoutResult.getLineTop(line)
+            } else {
+                lineHeightPx
+            }
+            val top = if (useLayout) {
+                textLayoutResult.getLineTop(line) - scrollOffsetPx
+            } else {
+                line * lineHeightPx - scrollOffsetPx
+            }
+            if (top + lineH < 0 || top > containerHeightPx) continue
 
             val item = itemProvider(line)
             // 准备要绘制的文本和是否需要缩放
@@ -81,7 +93,7 @@ fun Gutter(
                 drawLine(
                     Color.Gray,
                     Offset(lineX, top),
-                    Offset(lineX, top + lineHeightPx),
+                    Offset(lineX, top + lineH),
                     strokeWidth = 4.dp.toPx()
                 )
             } else {

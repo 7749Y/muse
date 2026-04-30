@@ -63,7 +63,12 @@ fun FixedCursorTextField(
     val touchSlopPx = with(density) { ViewConfiguration.get(context).scaledTouchSlop.toFloat() }
     val textMeasurer = rememberTextMeasurer()
 
-    // 计算底部留白（用于“滚动超出最后一行”效果）
+    // 统一行高：确保中文/英文行高一致
+    val effectiveTextStyle = remember(textStyle) {
+        textStyle.copy(lineHeight = textStyle.fontSize * 1.4f)
+    }
+
+    // 计算底部留白（用于”滚动超出最后一行”效果）
     // 当有有效文本布局时根据行高计算，否则使用默认值
     val bottomPaddingPx = remember(lineHeightPx, containerHeightPx) {
         if (lineHeightPx > 0f && containerHeightPx > 0f) {
@@ -86,7 +91,7 @@ fun FixedCursorTextField(
     LaunchedEffect(textLayoutResult) {
         textLayoutResult?.let { r ->
             if (r.lineCount > 0) {
-                lineHeightPx = r.getLineBottom(0) - r.getLineTop(0)
+                lineHeightPx = (r.getLineBottom(0) - r.getLineTop(0))
                 editorViewModel?.updateLayout(r, lineHeightPx)
             }
         }
@@ -159,7 +164,7 @@ fun FixedCursorTextField(
                     .focusRequester(focusRequester)
                     .onFocusChanged { isFocused = it.isFocused }
                     .drawWithContent { /* 隐藏绘制 */ },
-                textStyle = textStyle,
+                textStyle = effectiveTextStyle,
                 cursorBrush = SolidColor(Color.Transparent),
                 decorationBox = { inner -> inner() }
             )
@@ -192,7 +197,7 @@ fun FixedCursorTextField(
                 if (placeholderText != null && value.text.isEmpty()) {
                     val phLayout = textMeasurer.measure(
                         text = placeholderText,
-                        style = textStyle.copy(color = textStyle.color.copy()),
+                        style = effectiveTextStyle.copy(color = effectiveTextStyle.color.copy()),
                         constraints = Constraints(maxWidth = size.width.roundToInt())
                     )
                     drawText(phLayout, topLeft = Offset(0f, -scrollOffsetPx))
@@ -207,7 +212,7 @@ fun FixedCursorTextField(
                 // 空文本时绘制占位符
                 val phLayout = textMeasurer.measure(
                     text = placeholderText,
-                    style = textStyle.copy(color = textStyle.color.copy(alpha = 0.5F)),
+                    style = effectiveTextStyle.copy(color = effectiveTextStyle.color.copy(alpha = 0.5F)),
                     constraints = Constraints(maxWidth = size.width.roundToInt())
                 )
                 drawText(phLayout, topLeft = Offset(0f, -scrollOffsetPx))
