@@ -46,6 +46,7 @@ fun FixedCursorTextField(
     focusRequester: FocusRequester = remember { FocusRequester() },
     textStyle: TextStyle = TextStyle.Default,
     placeholderText: String? = null,
+    editorViewModel: EditorViewModel? = null,
 ) {
     val isImeVisible = WindowInsets.isImeVisible
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -81,11 +82,12 @@ fun FixedCursorTextField(
         }
     }
 
-    // 更新行高（基于第一行）
+    // 更新行高（基于第一行）并同步到 ViewModel
     LaunchedEffect(textLayoutResult) {
         textLayoutResult?.let { r ->
             if (r.lineCount > 0) {
                 lineHeightPx = r.getLineBottom(0) - r.getLineTop(0)
+                editorViewModel?.updateLayout(r, lineHeightPx)
             }
         }
     }
@@ -118,6 +120,7 @@ fun FixedCursorTextField(
         val maxScroll = maxOf(-topPaddingPx, textHeight + bottomPaddingPx - containerHeightPx)
 
         scrollOffsetPx = targetScroll.coerceIn(minScroll, maxScroll)
+        editorViewModel?.updateScroll(scrollOffsetPx)
     }
 
     LaunchedEffect(isImeVisible) {
@@ -131,6 +134,7 @@ fun FixedCursorTextField(
             val minScroll = if (totalH < containerHeightPx) -(containerHeightPx - totalH) / 2f else -topPaddingPx
             val maxScroll = max(0f, textHeight + bottomPaddingPx - containerHeightPx)
             scrollOffsetPx = targetScroll.coerceIn(minScroll, maxScroll)
+            editorViewModel?.updateScroll(scrollOffsetPx)
         }
     }
 
@@ -141,7 +145,10 @@ fun FixedCursorTextField(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .onSizeChanged { containerHeightPx = it.height.toFloat() }
+                .onSizeChanged {
+                    containerHeightPx = it.height.toFloat()
+                    editorViewModel?.updateContainerHeight(it.height.toFloat())
+                }
         ) {
             BasicTextField(
                 value = value,
@@ -295,6 +302,7 @@ fun FixedCursorTextField(
                                     // 修复：滚动方向
                                     scrollOffsetPx =
                                         (scrollOffsetPx - delta.y).coerceIn(minSc, maxSc)
+                                    editorViewModel?.updateScroll(scrollOffsetPx)
                                 }
                             }
                         }

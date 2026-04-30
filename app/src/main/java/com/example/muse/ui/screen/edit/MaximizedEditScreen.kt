@@ -149,21 +149,21 @@ fun MaximizedEditScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 41.dp)
+                    .padding(horizontal = 5.dp)
                     .padding(top = if (isKeyboardOpen) 0.dp else 35.dp)
                     .padding(bottom = keyboardHeightDp)
             ) {
-                FixedCursorTextField(
+                GeneralEditor(
                     value = tfValue,
                     onValueChange = { tfValue = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    focusRequester = focusRequester,
+                    modifier = Modifier
+                        .fillMaxSize(),
                     textStyle = TextStyle(
                         color = Color.White,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
-                    placeholderText = if (tfValue.text.isEmpty()) "段落" else null
+                    placeholderText = "输入内容..."
                 )
             }
         }
