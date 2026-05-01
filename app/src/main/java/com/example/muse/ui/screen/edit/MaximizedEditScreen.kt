@@ -92,6 +92,7 @@ fun MaximizedEditScreen(
     val navBarHeight = if (isKeyboardOpen) 22.dp else 44.dp
     val titleFontSize = if (isKeyboardOpen) 12.sp else 24.sp
 
+    val keyboardController = LocalSoftwareKeyboardController.current
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -211,7 +212,6 @@ fun MaximizedEditScreen(
                 .align(Alignment.BottomEnd)
                 .padding(end = 37.dp, bottom = 22.dp)
         ) {
-            val keyboardController = LocalSoftwareKeyboardController.current
             IconButton(
                 onClick = {
                     focusRequester.requestFocus()
@@ -236,9 +236,7 @@ fun MaximizedEditScreen(
     }
 
     // Autofocus on first composition to open keyboard
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
+
 }
 
 @Preview(

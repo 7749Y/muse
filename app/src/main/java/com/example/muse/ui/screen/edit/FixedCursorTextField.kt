@@ -1,5 +1,6 @@
 package com.example.muse.ui.screen.edit
 
+import android.util.Log
 import android.view.ViewConfiguration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
@@ -38,7 +39,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -192,40 +195,91 @@ fun FixedCursorTextField(
     }
 
     val currentValue by rememberUpdatedState(value)
+    var previousValue by remember { mutableStateOf(value) }
     val currentAdjustedLines by rememberUpdatedState(adjustedLines)
 
 // 撤销/重做栈
     val undoStack = remember { mutableStateListOf<TextFieldValue>() }
     val redoStack = remember { mutableStateListOf<TextFieldValue>() }
+    val scope = rememberCoroutineScope()
     val MAX_UNDO_DEPTH = 200  // 可调整
 
-// 原始回调，不记录历史（用于撤销/重做）
-    val rawOnValueChange = onValueChange
+    // 延迟提交相关
+    var pendingBaseline by remember { mutableStateOf<TextFieldValue?>(null) }
+    var pendingJob by remember { mutableStateOf<Job?>(null) }
 
-// 包裹后的回调，自动记录历史（用于正常输入和触摸）
-    val historyOnValueChange: (TextFieldValue) -> Unit = { newValue ->
-        // 仅当文本或选区真正变化时才记录
-        if (newValue.text != currentValue.text || newValue.selection != currentValue.selection) {
-            val last = undoStack.lastOrNull()
-            if (last == null || last.text != currentValue.text || last.selection != currentValue.selection) {
-                if (undoStack.size >= MAX_UNDO_DEPTH) {
-                    undoStack.removeAt(0)  // 丢弃最旧的状态
+    var isProgrammaticChange by remember { mutableStateOf(false) }
+
+// 原始回调，不记录历史（用于撤销/重做）
+    val rawOnValueChangeWithPrev: (TextFieldValue) -> Unit = { newValue ->
+        isProgrammaticChange = true
+        previousValue = newValue
+        onValueChange(newValue)
+    }
+
+    val historyOnValueChange: (TextFieldValue) -> Unit = Unit@{ newValue ->
+        if (isProgrammaticChange) {
+            // 程序触发的改变，不记录历史，只更新 previousValue（已经通过 rawOnValueChangeWithPrev 更新了）
+            isProgrammaticChange = false
+            previousValue = newValue
+            return@Unit
+        }
+
+
+        val oldValue = previousValue
+        previousValue = newValue
+
+        val textChanged = newValue.text != oldValue.text
+        val selectionChanged = newValue.selection != oldValue.selection
+
+        if (textChanged) {
+            if (pendingBaseline == null) {
+                pendingBaseline = oldValue
+                Log.d("UNDO", "设置基线: text='${oldValue.text}', sel=${oldValue.selection}")
+            }
+            pendingJob?.cancel()
+            val baseline = pendingBaseline
+            if (baseline != null) {
+                pendingJob = scope.launch {
+                    delay(500)
+                    Log.d("UNDO", "延迟提交基线: text='${baseline.text}', sel=${baseline.selection}")
+                    if (undoStack.lastOrNull()?.text != baseline.text || undoStack.lastOrNull()?.selection != baseline.selection) {
+                        undoStack.add(baseline)
+                        redoStack.clear()
+                        if (undoStack.size > MAX_UNDO_DEPTH) undoStack.removeAt(0)
+                        Log.d("UNDO", "入栈后 undoStack size=${undoStack.size}")
+                    }
+                    pendingBaseline = null
+                    pendingJob = null
                 }
-                undoStack.add(currentValue)
-                redoStack.clear()
+            } else {
+                pendingJob?.cancel()
+                pendingJob = null
+            }
+        } else if (selectionChanged) {
+            if (pendingBaseline == null && oldValue.text.isNotEmpty()) {
+                if (undoStack.lastOrNull()?.let { it.text != oldValue.text || it.selection != oldValue.selection } != false) {
+                    undoStack.add(oldValue)
+                    redoStack.clear()
+                    if (undoStack.size > MAX_UNDO_DEPTH) undoStack.removeAt(0)
+                    Log.d("UNDO", "选区变化入栈: sel=${oldValue.selection}")
+                }
             }
         }
-        rawOnValueChange(newValue)
+        rawOnValueChangeWithPrev(newValue)
     }
 
     Box(modifier = modifier
         .clip(RoundedCornerShape(0.dp))
         .onPreviewKeyEvent { event ->
             if (event.type == KeyEventType.KeyDown) {
-                handleKeyEvent(event, currentValue, rawOnValueChange, undoStack, redoStack)
-            } else {
-                false
-            }
+                // 任何按键操作都取消正在等待提交的基线
+                pendingJob?.cancel()
+                pendingBaseline = null
+                handleKeyEvent(
+                    event, currentValue, rawOnValueChangeWithPrev, undoStack, redoStack
+                )
+            } else false
         }
     ) {
         // Layer 1: 隐藏的 BasicTextField —— 仅负责IME输入
@@ -459,13 +513,13 @@ fun FixedCursorTextField(
                                             // 双击：选中单词
                                             val bounds = wordBoundaries(currentValue.text, tapOffset)
                                             if (bounds != null) {
-                                                onValueChange(
+                                                historyOnValueChange(
                                                     currentValue.copy(selection = TextRange(bounds.first, bounds.last + 1))
                                                 )
                                             }
                                         } else if (!isDoubleTap && tapOffset != null) {
                                             // 单击：设置光标到点击位置
-                                            onValueChange(
+                                            historyOnValueChange(
                                                 currentValue.copy(selection = TextRange(tapOffset))
                                             )
                                         }
@@ -518,7 +572,7 @@ fun FixedCursorTextField(
 
 // 判断某视觉行结束后是否是段落结束（即遇到 '\n' 或文本结尾）
 internal fun TextLayoutResult.isParagraphEnd(line: Int): Boolean {
-    if (line < 0 || line >= lineCount) return true
+    if (line !in 0..<lineCount) return true
     val end = getLineEnd(line)          // 该行结束后的索引
     val text = layoutInput.text
     // 如果 end 在有效范围内，且前一个字符是换行符，则该行是段落结尾
@@ -577,26 +631,29 @@ private fun wordBoundaries(text: String, offset: Int): IntRange? {
 private fun handleKeyEvent(
     event: androidx.compose.ui.input.key.KeyEvent,
     currentValue: TextFieldValue,
-    onSetValue: (TextFieldValue) -> Unit,   // 原始回调，不记录历史
+    onSetValue: (TextFieldValue) -> Unit,
     undoStack: MutableList<TextFieldValue>,
     redoStack: MutableList<TextFieldValue>,
 ): Boolean {
     val ctrl = event.isCtrlPressed
-
     return when (event.key) {
         Key.Z -> {
             if (ctrl && undoStack.isNotEmpty()) {
                 val prev = undoStack.removeAt(undoStack.lastIndex)
-                redoStack.add(currentValue)       // 记录当前状态到重做栈
-                onSetValue(prev)                  // 直接设置，不记录历史
+                redoStack.add(currentValue)
+                Log.d("UNDO", "撤销: 弹出 text='${prev.text}', 当前压入重做栈 text='${currentValue.text}'")
+                Log.d("UNDO", "撤销后 undoStack size=${undoStack.size}, redoStack size=${redoStack.size}")
+                onSetValue(prev)
                 true
             } else false
         }
         Key.C -> {
             if (ctrl && redoStack.isNotEmpty()) {
                 val next = redoStack.removeAt(redoStack.lastIndex)
-                undoStack.add(currentValue)       // 记录当前状态到撤销栈
-                onSetValue(next)                  // 直接设置
+                undoStack.add(currentValue)
+                Log.d("UNDO", "重做: 弹出 text='${next.text}', 当前压入撤销栈 text='${currentValue.text}'")
+                Log.d("UNDO", "重做后 undoStack size=${undoStack.size}, redoStack size=${redoStack.size}")
+                onSetValue(next)
                 true
             } else false
         }
