@@ -251,6 +251,41 @@ fun FixedCursorTextField(
                 )
             }
 
+            // 绘制选中高亮（蓝色背景）
+            val selStart = value.selection.start
+            val selEnd = value.selection.end
+            if (selStart != selEnd) {
+                val minSel = minOf(selStart, selEnd)
+                val maxSel = maxOf(selStart, selEnd)
+                var off = minSel
+                while (off < maxSel && off < r.layoutInput.text.length) {
+                    val line = r.getLineForOffset(off)
+                    val lineEnd = minOf(r.getLineEnd(line), maxSel)
+                    if (off < lineEnd) {
+                        val startRect = r.getBoundingBox(off)
+                        val endRect = r.getBoundingBox(lineEnd - 1)
+                        val left = startRect.left
+                        val right = endRect.right
+                        val (adjTop, adjBottom) = run {
+                            val sl = adjustedLines
+                            if (sl != null) {
+                                val adj = sl.getOrNull(line)
+                                if (adj != null) adj.top to adj.bottom
+                                else r.getLineTop(line) to r.getLineBottom(line)
+                            } else {
+                                r.getLineTop(line) to r.getLineBottom(line)
+                            }
+                        }
+                        drawRect(
+                            color = Color(0xFF335EFF),
+                            topLeft = Offset(left, adjTop - scrollOffsetPx),
+                            size = Size(right - left, adjBottom - adjTop)
+                        )
+                    }
+                    off = lineEnd
+                }
+            }
+
             // 修复：即便 textLayoutResult 为 null，也尝试绘制占位符
             if (r == null) {
                 if (placeholderText != null && value.text.isEmpty()) {
