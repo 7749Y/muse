@@ -322,6 +322,10 @@ fun FixedCursorTextField(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
+                    var lastTapTimeMs = 0L
+                    var lastTapX = 0f
+                    var lastTapY = 0f
+
                     awaitPointerEventScope {
                         while (true) {
                             val ev = awaitPointerEvent()
@@ -345,18 +349,24 @@ fun FixedCursorTextField(
                                     mch.consume()
 
                                     if (!drag) {
-                                        // 点击：设置光标到点击位置
-                                        textLayoutResult?.let { r ->
-                                            val tapX =
-                                                mch.position.x.coerceIn(0f, r.size.width.toFloat())
-                                            val tapAdjustedY = mch.position.y + scrollOffsetPx
+                                        val now = System.currentTimeMillis()
+                                        val tapPos = mch.position
+                                        val isDoubleTap = now - lastTapTimeMs < ViewConfiguration.getDoubleTapTimeout() &&
+                                            abs(tapPos.x - lastTapX) < touchSlopPx * 3 &&
+                                            abs(tapPos.y - lastTapY) < touchSlopPx * 3
+                                        lastTapTimeMs = now
+                                        lastTapX = tapPos.x
+                                        lastTapY = tapPos.y
+
+                                        // 计算点击位置的字符偏移（双击和单击共享）
+                                        val tapOffset = textLayoutResult?.let { r ->
+                                            val tapX = tapPos.x.coerceIn(0f, r.size.width.toFloat())
+                                            val tapAdjustedY = tapPos.y + scrollOffsetPx
                                             val cal2 = currentAdjustedLines
                                             val adjLine = cal2?.firstOrNull { tapAdjustedY in it.top..it.bottom }
                                             val tapY = if (adjLine != null) {
-                                                // 精确命中某行
                                                 r.getLineTop(adjLine.originalLineIndex) + (tapAdjustedY - adjLine.top)
                                             } else if (!cal2.isNullOrEmpty()) {
-                                                // 点击在段落间隙：吸附到最近的可行行
                                                 val nearest = cal2.minByOrNull { abs(it.top + (it.bottom - it.top) / 2f - tapAdjustedY) }
                                                 if (nearest != null) {
                                                     val centerY = nearest.top + (nearest.bottom - nearest.top) / 2f
@@ -368,19 +378,27 @@ fun FixedCursorTextField(
                                             } else {
                                                 tapAdjustedY.coerceIn(0f, r.size.height.toFloat())
                                             }
-                                            r.getOffsetForPosition(Offset(tapX, tapY))
-                                                .takeIf { it != -1 }
-                                                ?.let { off ->
-                                                    onValueChange(
-                                                        currentValue.copy(selection = TextRange(off))
-                                                    )
-                                                }
+                                            r.getOffsetForPosition(Offset(tapX, tapY)).takeIf { it != -1 }
+                                        }
+
+                                        if (isDoubleTap && tapOffset != null) {
+                                            // 双击：选中单词
+                                            val bounds = wordBoundaries(currentValue.text, tapOffset)
+                                            if (bounds != null) {
+                                                onValueChange(
+                                                    currentValue.copy(selection = TextRange(bounds.first, bounds.last + 1))
+                                                )
+                                            }
+                                        } else if (!isDoubleTap && tapOffset != null) {
+                                            // 单击：设置光标到点击位置
+                                            onValueChange(
+                                                currentValue.copy(selection = TextRange(tapOffset))
+                                            )
                                         }
                                         focusRequester.requestFocus()
                                     } else {
                                         // 拖拽结束：只结束拖拽状态，不移动光标（修复原 bug）
                                         isDragging = false
-                                        // 如果希望拖拽后保持滚动位置（即不自动居中），则不需要额外操作
                                     }
                                     break
                                 }
@@ -467,4 +485,16 @@ private fun TextLayoutResult.getParagraphLines(offset: Int): IntRange {
         endLine++
     }
     return startLine..endLine
+}
+
+// 查找 offset 所在单词的边界（字母/数字/下划线视为单词字符，CJK 字符也计入）
+private fun wordBoundaries(text: String, offset: Int): IntRange? {
+    if (text.isEmpty() || offset !in text.indices) return null
+    val isWord = { c: Char -> c.isLetterOrDigit() || c == '_' }
+    if (!isWord(text[offset])) return null
+    var start = offset
+    while (start > 0 && isWord(text[start - 1])) start--
+    var end = offset
+    while (end < text.length - 1 && isWord(text[end + 1])) end++
+    return start..end
 }
