@@ -33,6 +33,7 @@ fun Gutter(
     fixedWidth: Dp? = null,             // 固定列宽，null = 自适应
     centerContent: Boolean = true,      // 是否在列内水平居中（默认居中）
     textLayoutResult: TextLayoutResult? = null,  // 精确行位置，null 时用 lineHeightPx 推算
+    useLogicalLines: Boolean = false,   // 按逻辑行（\n 分隔）绘制，itemProvider 接收逻辑行索引
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
@@ -45,15 +46,36 @@ fun Gutter(
     // 计算固定列宽的像素值
     val fixedWidthPx = fixedWidth?.let { with(density) { it.toPx() } }
 
-    val maxNumberString = remember(totalLines) {
-        totalLines.toString()
+    // 逻辑行索引 -> 首个视觉行索引的映射
+    val isLogical = useLogicalLines && textLayoutResult != null
+    val logicalData = remember(isLogical, textLayoutResult?.layoutInput?.text) {
+        if (!isLogical) null
+        else {
+            val text = textLayoutResult.layoutInput.text
+            val offsets = mutableListOf(0)
+            var idx = text.indexOf('\n')
+            while (idx >= 0) {
+                offsets.add(idx + 1)
+                idx = text.indexOf('\n', idx + 1)
+            }
+            offsets.map { off ->
+                val visualLine = textLayoutResult.getLineForOffset(off.coerceAtMost(text.length))
+                // 该逻辑行占据的最后一个视觉行
+                visualLine
+            }
+        }
+    }
+    val effectiveLineCount = logicalData?.size ?: totalLines
+
+    val maxNumberString = remember(effectiveLineCount) {
+        effectiveLineCount.toString()
     }
     val maxNumWidth = textMeasurer.measure(maxNumberString, gutterStyle).size.width
     val bulletWidth = textMeasurer.measure("•", gutterStyle).size.width
     val quoteLineWidth = with(density) { 4.dp.toPx() }
 
     val columnWidth = fixedWidthPx
-        ?: remember(totalLines) {
+        ?: remember(effectiveLineCount) {
             val maxContentWidth = maxNumWidth.toFloat().coerceAtLeast(bulletWidth.toFloat()).coerceAtLeast(quoteLineWidth)
             maxContentWidth + with(density) { 0.dp.toPx() }
         }
@@ -63,21 +85,30 @@ fun Gutter(
             .width(with(density) { columnWidth.toDp() })
             .fillMaxHeight()
     ) {
-        for (line in 0 until totalLines) {
+        for (itemIdx in 0 until effectiveLineCount) {
+            val line = if (isLogical) logicalData!![itemIdx] else itemIdx
             val useLayout = textLayoutResult != null && line < textLayoutResult.lineCount
-            val lineH = if (useLayout) {
-                textLayoutResult.getLineBottom(line) - textLayoutResult.getLineTop(line)
+
+            val (lineH, top) = if (useLayout) {
+                if (isLogical) {
+                    val lastVLine = if (itemIdx + 1 < logicalData!!.size)
+                        logicalData[itemIdx + 1] - 1
+                    else
+                        textLayoutResult.lineCount - 1
+                    val h = textLayoutResult.getLineBottom(lastVLine) - textLayoutResult.getLineTop(line)
+                    val t = textLayoutResult.getLineTop(line) - scrollOffsetPx
+                    Pair(h, t)
+                } else {
+                    val h = textLayoutResult.getLineBottom(line) - textLayoutResult.getLineTop(line)
+                    val t = textLayoutResult.getLineTop(line) - scrollOffsetPx
+                    Pair(h, t)
+                }
             } else {
-                lineHeightPx
-            }
-            val top = if (useLayout) {
-                textLayoutResult.getLineTop(line) - scrollOffsetPx
-            } else {
-                line * lineHeightPx - scrollOffsetPx
+                Pair(lineHeightPx, itemIdx * lineHeightPx - scrollOffsetPx)
             }
             if (top + lineH < 0 || top > containerHeightPx) continue
 
-            val item = itemProvider(line)
+            val item = itemProvider(itemIdx)  // itemProvider 始终接收行索引（逻辑行或视觉行）
             // 准备要绘制的文本和是否需要缩放
             val (textToDraw, isQuote) = when (item) {
                 GutterItem.None -> continue
@@ -118,7 +149,7 @@ fun Gutter(
                 } else {
                     columnWidth - textWidth.size.width - with(density) { 0.dp.toPx() } // 右对齐
                 }
-                val y = top + (lineH - textWidth.size.height) / 2f // 垂直居中
+                val y = top + (textWidth.size.height/3f) // 相对第一行垂直居中
                 drawText(textWidth, topLeft = Offset(x, y))
             }
         }
