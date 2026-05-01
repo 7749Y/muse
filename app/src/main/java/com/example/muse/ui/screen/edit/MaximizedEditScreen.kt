@@ -168,12 +168,14 @@ fun MaximizedEditScreen(
                     onValueChange = { tfValue = it },
                     modifier = Modifier
                         .fillMaxSize(),
+                    gutterProvider = { GutterItem.Number(it + 1) },
                     textStyle = TextStyle(
                         color = Color.White,
-                        fontSize = 24.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
-                    placeholderText = "输入内容..."
+                    placeholderText = "输入内容...",
+                    paragraphSpacingPx = 50f
                 )
             }
         }

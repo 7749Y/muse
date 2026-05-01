@@ -47,6 +47,7 @@ fun FixedCursorTextField(
     textStyle: TextStyle = TextStyle.Default,
     placeholderText: String? = null,
     editorViewModel: EditorViewModel? = null,
+    paragraphSpacingPx: Float = 0f,
 ) {
     val isImeVisible = WindowInsets.isImeVisible
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -86,6 +87,27 @@ fun FixedCursorTextField(
             containerHeightPx
         }
     }
+
+    // 计算段落间距调整后的行位置
+    val adjustedLines = remember(textLayoutResult, paragraphSpacingPx) {
+        if (textLayoutResult != null && paragraphSpacingPx > 0f) {
+            textLayoutResult!!.buildAdjustedLines(paragraphSpacingPx)
+        } else {
+            null
+        }
+    }
+
+    // 同步调整后的行位置到 ViewModel
+    LaunchedEffect(adjustedLines) {
+        if (editorViewModel != null) {
+            editorViewModel.updateAdjustedLines(
+                adjustedLines ?: emptyList(),
+                if (adjustedLines != null) paragraphSpacingPx else 0f
+            )
+        }
+    }
+
+
 
     // 更新行高（基于第一行）并同步到 ViewModel
     LaunchedEffect(textLayoutResult) {
@@ -144,6 +166,7 @@ fun FixedCursorTextField(
     }
 
     val currentValue by rememberUpdatedState(value)
+    val currentAdjustedLines by rememberUpdatedState(adjustedLines)
 
     Box(modifier = modifier.clip(RoundedCornerShape(0.dp))) {
         // Layer 1: 隐藏的 BasicTextField —— 仅负责IME输入
@@ -181,10 +204,14 @@ fun FixedCursorTextField(
             } else {
                 IntRange.EMPTY
             }
-            // 绘制段落高亮（所有行合并为一个矩形，或者逐行绘制）
+            // 绘制段落高亮（使用调整后的行位置）
             for (line in paragraphLines) {
-                val lineTop = r.getLineTop(line)
-                val lineBottom = r.getLineBottom(line)
+                val (lineTop, lineBottom) = if (adjustedLines != null && line < adjustedLines.size) {
+                    val adj = adjustedLines[line]
+                    adj.top to adj.bottom
+                } else {
+                    r.getLineTop(line) to r.getLineBottom(line)
+                }
                 drawRect(
                     color = Color(0xFF444444),
                     topLeft = Offset(0f, lineTop - scrollOffsetPx),
@@ -207,7 +234,29 @@ fun FixedCursorTextField(
 
             // 以下正常绘制
             if (value.text.isNotEmpty()) {
-                drawText(r, topLeft = Offset(0f, -scrollOffsetPx))
+                if (adjustedLines != null) {
+                    // 逐行测量绘制，每行出现在调整后的 Y 位置
+                    for (adj in adjustedLines) {
+                        if (adj.originalLineIndex !in 0 until r.lineCount) continue
+                        val start = r.getLineStart(adj.originalLineIndex)
+                        val end = r.getLineEnd(adj.originalLineIndex)
+                        val lineText = r.layoutInput.text.substring(start, end).trimEnd('\n')
+                        val lineLayout = textMeasurer.measure(
+                            text = lineText,
+                            style = effectiveTextStyle,
+                            constraints = Constraints(maxWidth = size.width.roundToInt())
+                        )
+                        val adjVisTop = adj.top - scrollOffsetPx
+                        val adjVisBottom = adj.bottom - scrollOffsetPx
+                        if (adjVisBottom < 0 || adjVisTop > size.height) continue
+                        drawText(
+                            lineLayout,
+                            topLeft = Offset(r.getLineLeft(adj.originalLineIndex), adjVisTop)
+                        )
+                    }
+                } else {
+                    drawText(r, topLeft = Offset(0f, -scrollOffsetPx))
+                }
             } else if (placeholderText != null) {
                 // 空文本时绘制占位符
                 val phLayout = textMeasurer.measure(
@@ -221,9 +270,16 @@ fun FixedCursorTextField(
             // 光标绘制
             if (isFocused && cursorVisible && cursorPos <= r.layoutInput.text.length) {
                 val cursorRect = r.getCursorRect(cursorPos)
+                val cursorY = adjustedLines?.let { lines ->
+                    val cursorLine = r.getLineForOffset(cursorPos)
+                    lines.getOrNull(cursorLine)?.let { adj ->
+                        adj.top + (cursorRect.top - r.getLineTop(cursorLine))
+                    }
+                } ?: cursorRect.top   // 如果 adjustedLines 为空或取不到，退回原始 top
+
                 drawRect(
                     color = Color.White,
-                    topLeft = Offset(cursorRect.left, cursorRect.top - scrollOffsetPx),
+                    topLeft = Offset(cursorRect.left, cursorY - scrollOffsetPx),
                     size = Size(max(2f, cursorRect.width), cursorRect.height)
                 )
             }
@@ -261,8 +317,25 @@ fun FixedCursorTextField(
                                         textLayoutResult?.let { r ->
                                             val tapX =
                                                 mch.position.x.coerceIn(0f, r.size.width.toFloat())
-                                            val tapY = (mch.position.y + scrollOffsetPx)
-                                                .coerceIn(0f, r.size.height.toFloat())
+                                            val tapAdjustedY = mch.position.y + scrollOffsetPx
+                                            val cal2 = currentAdjustedLines
+                                            val adjLine = cal2?.firstOrNull { tapAdjustedY in it.top..it.bottom }
+                                            val tapY = if (adjLine != null) {
+                                                // 精确命中某行
+                                                r.getLineTop(adjLine.originalLineIndex) + (tapAdjustedY - adjLine.top)
+                                            } else if (!cal2.isNullOrEmpty()) {
+                                                // 点击在段落间隙：吸附到最近的可行行
+                                                val nearest = cal2.minByOrNull { abs(it.top + (it.bottom - it.top) / 2f - tapAdjustedY) }
+                                                if (nearest != null) {
+                                                    val centerY = nearest.top + (nearest.bottom - nearest.top) / 2f
+                                                    val mappedY = if (tapAdjustedY <= centerY) nearest.bottom - 1f else nearest.top
+                                                    r.getLineTop(nearest.originalLineIndex) + (mappedY - nearest.top)
+                                                } else {
+                                                    tapAdjustedY.coerceIn(0f, r.size.height.toFloat())
+                                                }
+                                            } else {
+                                                tapAdjustedY.coerceIn(0f, r.size.height.toFloat())
+                                            }
                                             r.getOffsetForPosition(Offset(tapX, tapY))
                                                 .takeIf { it != -1 }
                                                 ?.let { off ->
@@ -318,8 +391,8 @@ fun FixedCursorTextField(
 }
 
 
-//判断某视觉行结束后是否是段落结束（即遇到 '\n' 或文本结尾）
-private fun TextLayoutResult.isParagraphEnd(line: Int): Boolean {
+// 判断某视觉行结束后是否是段落结束（即遇到 '\n' 或文本结尾）
+internal fun TextLayoutResult.isParagraphEnd(line: Int): Boolean {
     if (line < 0 || line >= lineCount) return true
     val end = getLineEnd(line)          // 该行结束后的索引
     val text = layoutInput.text
@@ -327,6 +400,23 @@ private fun TextLayoutResult.isParagraphEnd(line: Int): Boolean {
     if (end > 0 && end <= text.length && text[end - 1] == '\n') return true
     // 如果 end 等于文本长度，说明是最后一行，也视为段落结尾
     return end >= text.length
+}
+
+// 构建调整后的行位置列表，在段落间插入 paragraphSpacingPx 间距
+internal fun TextLayoutResult.buildAdjustedLines(paragraphSpacingPx: Float): List<AdjustedLine> {
+    val result = mutableListOf<AdjustedLine>()
+    var accumulatedOffset = 0f
+    for (line in 0 until lineCount) {
+        if (line > 0 && isParagraphEnd(line - 1)) {
+            accumulatedOffset += paragraphSpacingPx
+        }
+        result.add(AdjustedLine(
+            originalLineIndex = line,
+            top = getLineTop(line) + accumulatedOffset,
+            bottom = getLineBottom(line) + accumulatedOffset,
+        ))
+    }
+    return result
 }
 
 //获取光标所在段落的所有视觉行索引（闭区间）
