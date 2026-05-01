@@ -22,9 +22,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -192,10 +194,38 @@ fun FixedCursorTextField(
     val currentValue by rememberUpdatedState(value)
     val currentAdjustedLines by rememberUpdatedState(adjustedLines)
 
+// 撤销/重做栈
+    val undoStack = remember { mutableStateListOf<TextFieldValue>() }
+    val redoStack = remember { mutableStateListOf<TextFieldValue>() }
+    val MAX_UNDO_DEPTH = 200  // 可调整
+
+// 原始回调，不记录历史（用于撤销/重做）
+    val rawOnValueChange = onValueChange
+
+// 包裹后的回调，自动记录历史（用于正常输入和触摸）
+    val historyOnValueChange: (TextFieldValue) -> Unit = { newValue ->
+        // 仅当文本或选区真正变化时才记录
+        if (newValue.text != currentValue.text || newValue.selection != currentValue.selection) {
+            val last = undoStack.lastOrNull()
+            if (last == null || last.text != currentValue.text || last.selection != currentValue.selection) {
+                if (undoStack.size >= MAX_UNDO_DEPTH) {
+                    undoStack.removeAt(0)  // 丢弃最旧的状态
+                }
+                undoStack.add(currentValue)
+                redoStack.clear()
+            }
+        }
+        rawOnValueChange(newValue)
+    }
+
     Box(modifier = modifier
         .clip(RoundedCornerShape(0.dp))
         .onPreviewKeyEvent { event ->
-            handleKeyEvent(event, currentValue, onValueChange)
+            if (event.type == KeyEventType.KeyDown) {
+                handleKeyEvent(event, currentValue, rawOnValueChange, undoStack, redoStack)
+            } else {
+                false
+            }
         }
     ) {
         // Layer 1: 隐藏的 BasicTextField —— 仅负责IME输入
@@ -209,7 +239,7 @@ fun FixedCursorTextField(
         ) {
             BasicTextField(
                 value = value,
-                onValueChange = onValueChange,
+                onValueChange = historyOnValueChange,
                 onTextLayout = { layoutResult ->
                     textLayoutResult = layoutResult
                     // 立即计算调整后的行位置，消除闪烁
@@ -547,40 +577,29 @@ private fun wordBoundaries(text: String, offset: Int): IntRange? {
 private fun handleKeyEvent(
     event: androidx.compose.ui.input.key.KeyEvent,
     currentValue: TextFieldValue,
-    onValueChange: (TextFieldValue) -> Unit,
+    onSetValue: (TextFieldValue) -> Unit,   // 原始回调，不记录历史
+    undoStack: MutableList<TextFieldValue>,
+    redoStack: MutableList<TextFieldValue>,
 ): Boolean {
-    val text = currentValue.text
-    val selection = currentValue.selection
-    val shift = event.isShiftPressed
+    val ctrl = event.isCtrlPressed
 
-    val newSelection = when (event.key) {
-        Key.DirectionLeft -> {
-            if (shift) {
-                val newEnd = (selection.end - 1).coerceAtLeast(0)
-                TextRange(selection.start, newEnd)
-            } else if (!selection.collapsed) {
-                TextRange(selection.min)
-            } else {
-                TextRange((selection.start - 1).coerceAtLeast(0))
-            }
+    return when (event.key) {
+        Key.Z -> {
+            if (ctrl && undoStack.isNotEmpty()) {
+                val prev = undoStack.removeAt(undoStack.lastIndex)
+                redoStack.add(currentValue)       // 记录当前状态到重做栈
+                onSetValue(prev)                  // 直接设置，不记录历史
+                true
+            } else false
         }
-        Key.DirectionRight -> {
-            if (shift) {
-                val newEnd = (selection.end + 1).coerceAtMost(text.length)
-                TextRange(selection.start, newEnd)
-            } else if (!selection.collapsed) {
-                TextRange(selection.max)
-            } else {
-                TextRange((selection.start + 1).coerceAtMost(text.length))
-            }
+        Key.C -> {
+            if (ctrl && redoStack.isNotEmpty()) {
+                val next = redoStack.removeAt(redoStack.lastIndex)
+                undoStack.add(currentValue)       // 记录当前状态到撤销栈
+                onSetValue(next)                  // 直接设置
+                true
+            } else false
         }
-        else -> null
-    }
-
-    return if (newSelection != null) {
-        onValueChange(currentValue.copy(selection = newSelection))
-        true
-    } else {
-        false
+        else -> false
     }
 }
