@@ -31,6 +31,7 @@ fun GeneralEditor(
     textStyle: TextStyle = TextStyle.Default,
     placeholderText: String? = null,
     editorViewModel: EditorViewModel = remember { EditorViewModel() },
+    extraNewlines: Int = 0,
 ) {
     Row(
         modifier = modifier
@@ -52,6 +53,7 @@ fun GeneralEditor(
                 centerContent = true,
                 textLayoutResult = vm.textLayoutResult,
                 useLogicalLines = true,
+                extraNewlines = extraNewlines,
             )
         }
 
@@ -64,6 +66,7 @@ fun GeneralEditor(
             textStyle = textStyle,
             placeholderText = placeholderText,
             editorViewModel = vm,
+            extraNewlines = extraNewlines,
         )
     }
 }

@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +28,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -47,6 +51,7 @@ fun FixedCursorTextField(
     textStyle: TextStyle = TextStyle.Default,
     placeholderText: String? = null,
     editorViewModel: EditorViewModel? = null,
+    extraNewlines: Int = 0,  // 逻辑行间插入的 \n 数量，>0 时在逻辑行间产生间距
 ) {
     val isImeVisible = WindowInsets.isImeVisible
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -62,6 +67,18 @@ fun FixedCursorTextField(
     // 修复：使用系统的触摸斜率
     val touchSlopPx = with(density) { ViewConfiguration.get(context).scaledTouchSlop.toFloat() }
     val textMeasurer = rememberTextMeasurer()
+
+    // 逻辑行间距 VisualTransformation
+    val spacingTransformation = remember(extraNewlines) {
+        ParagraphSpacingTransformation(extraNewlines)
+    }
+    val offsetMapping = remember(value.text, extraNewlines) {
+        if (extraNewlines > 0) {
+            spacingTransformation.filter(AnnotatedString(value.text)).offsetMapping
+        } else {
+            OffsetMapping.Identity
+        }
+    }
 
     // 统一行高：确保中文/英文行高一致
     val effectiveTextStyle = remember(textStyle) {
@@ -97,6 +114,9 @@ fun FixedCursorTextField(
         }
     }
 
+    val currentValue by rememberUpdatedState(value)
+    val currentOffsetMapping by rememberUpdatedState(offsetMapping)
+
     // Cursor blink
     LaunchedEffect(isFocused) {
         if (!isFocused) { cursorVisible = false; return@LaunchedEffect }
@@ -116,7 +136,8 @@ fun FixedCursorTextField(
     ) {
         if (!isImeVisible || isDragging || textLayoutResult == null || containerHeightPx <= 0f) return@LaunchedEffect
         val r = textLayoutResult!!
-        val cursorRect = r.getCursorRect(value.selection.start)
+        val transCursor = currentOffsetMapping.originalToTransformed(value.selection.start.coerceIn(0, value.text.length))
+        val cursorRect = r.getCursorRect(transCursor)
         val targetScroll = cursorRect.top - containerHeightPx / 2f + cursorRect.height / 2f
         val textHeight = r.size.height.toFloat()
 
@@ -132,7 +153,8 @@ fun FixedCursorTextField(
         if (isImeVisible && !isDragging) {
             // 手动触发一次居中（复用原有居中逻辑）
             val r = textLayoutResult ?: return@LaunchedEffect
-            val cursorRect = r.getCursorRect(value.selection.start)
+            val transCursor = currentOffsetMapping.originalToTransformed(value.selection.start.coerceIn(0, value.text.length))
+            val cursorRect = r.getCursorRect(transCursor)
             val targetScroll = cursorRect.top - containerHeightPx / 2f + cursorRect.height / 2f
             val textHeight = r.size.height.toFloat()
             val totalH = topPaddingPx + textHeight + bottomPaddingPx
@@ -142,8 +164,6 @@ fun FixedCursorTextField(
             editorViewModel?.updateScroll(scrollOffsetPx)
         }
     }
-
-    val currentValue by rememberUpdatedState(value)
 
     Box(modifier = modifier.clip(RoundedCornerShape(0.dp))) {
         // Layer 1: 隐藏的 BasicTextField —— 仅负责IME输入
@@ -165,6 +185,7 @@ fun FixedCursorTextField(
                     .onFocusChanged { isFocused = it.isFocused }
                     .drawWithContent { /* 隐藏绘制 */ },
                 textStyle = effectiveTextStyle,
+                visualTransformation = if (extraNewlines > 0) spacingTransformation else VisualTransformation.None,
                 cursorBrush = SolidColor(Color.Transparent),
                 decorationBox = { inner -> inner() }
             )
@@ -174,10 +195,11 @@ fun FixedCursorTextField(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val r = textLayoutResult ?: return@Canvas
             val cursorPos = value.selection.start.coerceIn(0, value.text.length)
+            val transformedPos = currentOffsetMapping.originalToTransformed(cursorPos)
 
             // ✅ 获取光标所在段落的所有视觉行
             val paragraphLines = if (value.text.isNotEmpty()) {
-                r.getParagraphLines(cursorPos)
+                r.getParagraphLines(transformedPos)
             } else {
                 IntRange.EMPTY
             }
@@ -219,8 +241,8 @@ fun FixedCursorTextField(
             }
 
             // 光标绘制
-            if (isFocused && cursorVisible && cursorPos <= r.layoutInput.text.length) {
-                val cursorRect = r.getCursorRect(cursorPos)
+            if (isFocused && cursorVisible && transformedPos <= r.layoutInput.text.length) {
+                val cursorRect = r.getCursorRect(transformedPos)
                 drawRect(
                     color = Color.White,
                     topLeft = Offset(cursorRect.left, cursorRect.top - scrollOffsetPx),
@@ -265,9 +287,10 @@ fun FixedCursorTextField(
                                                 .coerceIn(0f, r.size.height.toFloat())
                                             r.getOffsetForPosition(Offset(tapX, tapY))
                                                 .takeIf { it != -1 }
-                                                ?.let { off ->
+                                                ?.let { transOff ->
+                                                    val originalOff = currentOffsetMapping.transformedToOriginal(transOff)
                                                     onValueChange(
-                                                        currentValue.copy(selection = TextRange(off))
+                                                        currentValue.copy(selection = TextRange(originalOff))
                                                     )
                                                 }
                                         }
@@ -344,4 +367,37 @@ private fun TextLayoutResult.getParagraphLines(offset: Int): IntRange {
         endLine++
     }
     return startLine..endLine
+}
+
+/** 在每个逻辑行（\n）后额外插入 N 个 \n 来产生视觉间距，不改变原始文本内容 */
+private class ParagraphSpacingTransformation(private val extraNewlines: Int) : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val replacement = "\n".repeat(extraNewlines + 1)
+        val newStr = text.text.replace("\n", replacement)
+        val groupLen = extraNewlines + 1
+        return TransformedText(
+            AnnotatedString(newStr, text.spanStyles, text.paragraphStyles),
+            object : OffsetMapping {
+                override fun originalToTransformed(offset: Int): Int {
+                    val preceding = text.text.take(offset).count { it == '\n' }
+                    return offset + preceding * extraNewlines
+                }
+
+                override fun transformedToOriginal(offset: Int): Int {
+                    val s = newStr
+                    var count = 0
+                    var i = 0
+                    while (i < offset && i < s.length - groupLen + 1) {
+                        if (s[i] == '\n' && (0 until groupLen).all { s[i + it] == '\n' }) {
+                            count++
+                            i += groupLen
+                        } else {
+                            i++
+                        }
+                    }
+                    return (offset - count * extraNewlines).coerceIn(0, text.text.length)
+                }
+            }
+        )
+    }
 }

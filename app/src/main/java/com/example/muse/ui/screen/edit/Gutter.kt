@@ -34,6 +34,7 @@ fun Gutter(
     centerContent: Boolean = true,      // 是否在列内水平居中（默认居中）
     textLayoutResult: TextLayoutResult? = null,  // 精确行位置，null 时用 lineHeightPx 推算
     useLogicalLines: Boolean = false,   // 按逻辑行（\n 分隔）绘制，itemProvider 接收逻辑行索引
+    extraNewlines: Int = 0,             // VisualTransformation 额外插入的 \n 数，用于跳过空白行
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
@@ -48,20 +49,19 @@ fun Gutter(
 
     // 逻辑行索引 -> 首个视觉行索引的映射
     val isLogical = useLogicalLines && textLayoutResult != null
-    val logicalData = remember(isLogical, textLayoutResult?.layoutInput?.text) {
+    val logicalData = remember(isLogical, textLayoutResult?.layoutInput?.text, extraNewlines) {
         if (!isLogical) null
         else {
             val text = textLayoutResult.layoutInput.text
             val offsets = mutableListOf(0)
             var idx = text.indexOf('\n')
+            val skipLen = (extraNewlines + 1).coerceAtLeast(1)
             while (idx >= 0) {
-                offsets.add(idx + 1)
-                idx = text.indexOf('\n', idx + 1)
+                offsets.add(idx + skipLen)  // 跳过整组 \n，指向下一行内容
+                idx = text.indexOf('\n', idx + skipLen)
             }
             offsets.map { off ->
-                val visualLine = textLayoutResult.getLineForOffset(off.coerceAtMost(text.length))
-                // 该逻辑行占据的最后一个视觉行
-                visualLine
+                textLayoutResult.getLineForOffset(off.coerceAtMost(text.length))
             }
         }
     }
