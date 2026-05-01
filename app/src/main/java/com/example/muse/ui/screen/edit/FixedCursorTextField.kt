@@ -21,6 +21,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -188,7 +192,12 @@ fun FixedCursorTextField(
     val currentValue by rememberUpdatedState(value)
     val currentAdjustedLines by rememberUpdatedState(adjustedLines)
 
-    Box(modifier = modifier.clip(RoundedCornerShape(0.dp))) {
+    Box(modifier = modifier
+        .clip(RoundedCornerShape(0.dp))
+        .onPreviewKeyEvent { event ->
+            handleKeyEvent(event, currentValue, onValueChange)
+        }
+    ) {
         // Layer 1: 隐藏的 BasicTextField —— 仅负责IME输入
         Box(
             modifier = Modifier
@@ -532,4 +541,46 @@ private fun wordBoundaries(text: String, offset: Int): IntRange? {
     var end = offset
     while (end < text.length - 1 && isWord(text[end + 1])) end++
     return start..end
+}
+
+// 键盘快捷键处理
+private fun handleKeyEvent(
+    event: androidx.compose.ui.input.key.KeyEvent,
+    currentValue: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+): Boolean {
+    val text = currentValue.text
+    val selection = currentValue.selection
+    val shift = event.isShiftPressed
+
+    val newSelection = when (event.key) {
+        Key.DirectionLeft -> {
+            if (shift) {
+                val newEnd = (selection.end - 1).coerceAtLeast(0)
+                TextRange(selection.start, newEnd)
+            } else if (!selection.collapsed) {
+                TextRange(selection.min)
+            } else {
+                TextRange((selection.start - 1).coerceAtLeast(0))
+            }
+        }
+        Key.DirectionRight -> {
+            if (shift) {
+                val newEnd = (selection.end + 1).coerceAtMost(text.length)
+                TextRange(selection.start, newEnd)
+            } else if (!selection.collapsed) {
+                TextRange(selection.max)
+            } else {
+                TextRange((selection.start + 1).coerceAtMost(text.length))
+            }
+        }
+        else -> null
+    }
+
+    return if (newSelection != null) {
+        onValueChange(currentValue.copy(selection = newSelection))
+        true
+    } else {
+        false
+    }
 }
