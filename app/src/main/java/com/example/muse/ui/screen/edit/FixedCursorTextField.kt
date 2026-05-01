@@ -88,23 +88,14 @@ fun FixedCursorTextField(
         }
     }
 
-    // 计算段落间距调整后的行位置
-    val adjustedLines = remember(textLayoutResult, paragraphSpacingPx) {
-        if (textLayoutResult != null && paragraphSpacingPx > 0f) {
-            textLayoutResult!!.buildAdjustedLines(paragraphSpacingPx)
-        } else {
-            null
-        }
-    }
+    var adjustedLines by remember { mutableStateOf<List<AdjustedLine>?>(null) }
 
     // 同步调整后的行位置到 ViewModel
     LaunchedEffect(adjustedLines) {
-        if (editorViewModel != null) {
-            editorViewModel.updateAdjustedLines(
-                adjustedLines ?: emptyList(),
-                if (adjustedLines != null) paragraphSpacingPx else 0f
-            )
-        }
+        editorViewModel?.updateAdjustedLines(
+            adjustedLines ?: emptyList(),
+            if (adjustedLines != null) paragraphSpacingPx else 0f
+        )
     }
 
 
@@ -134,13 +125,28 @@ fun FixedCursorTextField(
         isImeVisible,
         containerHeightPx,
         topPaddingPx,
-        bottomPaddingPx
+        bottomPaddingPx,
+        adjustedLines,
     ) {
         if (!isImeVisible || isDragging || textLayoutResult == null || containerHeightPx <= 0f) return@LaunchedEffect
         val r = textLayoutResult!!
         val cursorRect = r.getCursorRect(value.selection.start)
-        val targetScroll = cursorRect.top - containerHeightPx / 2f + cursorRect.height / 2f
-        val textHeight = r.size.height.toFloat()
+
+        val al1 = adjustedLines
+        val (cursorTop, textHeight) = if (al1 != null) {
+            val cursorLine = r.getLineForOffset(value.selection.start)
+            val adj = al1.getOrNull(cursorLine)
+            if (adj != null) {
+                val adjCursorTop = adj.top + (cursorRect.top - r.getLineTop(cursorLine))
+                adjCursorTop to al1.last().bottom
+            } else {
+                cursorRect.top to al1.last().bottom
+            }
+        } else {
+            cursorRect.top to r.size.height.toFloat()
+        }
+
+        val targetScroll = cursorTop - containerHeightPx / 2f + cursorRect.height / 2f
 
         // 允许滚动范围涵盖从「只显示顶部留白」到「只显示底部留白」的所有位置
         val minScroll = minOf(-topPaddingPx, textHeight + bottomPaddingPx - containerHeightPx)
@@ -150,13 +156,27 @@ fun FixedCursorTextField(
         editorViewModel?.updateScroll(scrollOffsetPx)
     }
 
-    LaunchedEffect(isImeVisible) {
+    LaunchedEffect(isImeVisible, adjustedLines) {
         if (isImeVisible && !isDragging) {
             // 手动触发一次居中（复用原有居中逻辑）
             val r = textLayoutResult ?: return@LaunchedEffect
             val cursorRect = r.getCursorRect(value.selection.start)
-            val targetScroll = cursorRect.top - containerHeightPx / 2f + cursorRect.height / 2f
-            val textHeight = r.size.height.toFloat()
+
+            val al2 = adjustedLines
+            val (cursorTop, textHeight) = if (al2 != null) {
+                val cursorLine = r.getLineForOffset(value.selection.start)
+                val adj = al2.getOrNull(cursorLine)
+                if (adj != null) {
+                    val adjCursorTop = adj.top + (cursorRect.top - r.getLineTop(cursorLine))
+                    adjCursorTop to al2.last().bottom
+                } else {
+                    cursorRect.top to al2.last().bottom
+                }
+            } else {
+                cursorRect.top to r.size.height.toFloat()
+            }
+
+            val targetScroll = cursorTop - containerHeightPx / 2f + cursorRect.height / 2f
             val totalH = topPaddingPx + textHeight + bottomPaddingPx
             val minScroll = if (totalH < containerHeightPx) -(containerHeightPx - totalH) / 2f else -topPaddingPx
             val maxScroll = max(0f, textHeight + bottomPaddingPx - containerHeightPx)
@@ -181,7 +201,19 @@ fun FixedCursorTextField(
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
-                onTextLayout = { textLayoutResult = it },
+                onTextLayout = { layoutResult ->
+                    textLayoutResult = layoutResult
+                    // 立即计算调整后的行位置，消除闪烁
+                    adjustedLines = if (paragraphSpacingPx > 0f) {
+                        layoutResult.buildAdjustedLines(paragraphSpacingPx)
+                    } else null
+
+                    // 同步给 ViewModel
+                    editorViewModel?.updateAdjustedLines(
+                        adjustedLines ?: emptyList(),
+                        if (adjustedLines != null) paragraphSpacingPx else 0f
+                    )
+                },
                 modifier = Modifier
                     .fillMaxSize()
                     .focusRequester(focusRequester)
@@ -206,8 +238,8 @@ fun FixedCursorTextField(
             }
             // 绘制段落高亮（使用调整后的行位置）
             for (line in paragraphLines) {
-                val (lineTop, lineBottom) = if (adjustedLines != null && line < adjustedLines.size) {
-                    val adj = adjustedLines[line]
+                val (lineTop, lineBottom) = if (adjustedLines != null && line < adjustedLines!!.size) {
+                    val adj = adjustedLines!![line]
                     adj.top to adj.bottom
                 } else {
                     r.getLineTop(line) to r.getLineBottom(line)
@@ -366,8 +398,9 @@ fun FixedCursorTextField(
                                 }
 
                                 if (drag) {
-                                    val textH =
-                                        textLayoutResult?.size?.height?.toFloat() ?: continue
+                                    val textH = adjustedLines?.last()?.bottom
+                                        ?: textLayoutResult?.size?.height?.toFloat()
+                                        ?: continue
                                     // 应用顶部/底部留白限制
                                     val totalH = topPaddingPx + textH + bottomPaddingPx
                                     val minSc = if (totalH < containerHeightPx) {
