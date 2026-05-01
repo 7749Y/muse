@@ -149,7 +149,12 @@ fun Gutter(
                 } else {
                     columnWidth - textWidth.size.width - with(density) { 0.dp.toPx() } // 右对齐
                 }
-                val y = top + (textWidth.size.height/3f) // 相对第一行垂直居中
+                val y = if (useLayout && line < textLayoutResult.lineCount) {
+                    val contentLineH = textLayoutResult.getLineBottom(line) - textLayoutResult.getLineTop(line)
+                    top + (contentLineH - textWidth.size.height) / 2f
+                } else {
+                    top + (lineHeightPx - textWidth.size.height) / 2f
+                }
                 drawText(textWidth, topLeft = Offset(x, y))
             }
         }
