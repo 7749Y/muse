@@ -31,7 +31,6 @@ fun GeneralEditor(
     textStyle: TextStyle = TextStyle.Default,
     placeholderText: String? = null,
     editorViewModel: EditorViewModel = remember { EditorViewModel() },
-    extraNewlines: Int = 0,
 ) {
     Row(
         modifier = modifier
@@ -42,7 +41,7 @@ fun GeneralEditor(
         val vm = editorViewModel
         if (vm.textLayoutResult != null && vm.lineHeightPx > 0f) {
             Gutter(
-                itemProvider = gutterProvider,
+                itemProvider = { GutterItem.Number(it + 1) },
                 totalLines = vm.textLayoutResult!!.lineCount,
                 scrollOffsetPx = vm.scrollOffsetPx,
                 lineHeightPx = vm.lineHeightPx,
@@ -52,8 +51,6 @@ fun GeneralEditor(
                 fixedWidth = 30.dp,
                 centerContent = true,
                 textLayoutResult = vm.textLayoutResult,
-                useLogicalLines = true,
-                extraNewlines = extraNewlines,
             )
         }
 
@@ -66,7 +63,6 @@ fun GeneralEditor(
             textStyle = textStyle,
             placeholderText = placeholderText,
             editorViewModel = vm,
-            extraNewlines = extraNewlines,
         )
     }
 }
