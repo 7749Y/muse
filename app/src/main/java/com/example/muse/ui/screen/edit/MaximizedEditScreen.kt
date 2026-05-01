@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -80,6 +82,12 @@ fun MaximizedEditScreen(
             view.viewTreeObserver.removeOnGlobalLayoutListener(listener)
         }
     }
+
+    // 导航栏底部高度，从 keypadHeight 中扣除得到纯键盘高度
+    val bottomNavBarInsetDp = with(density) {
+        WindowInsets.navigationBars.getBottom(this).toDp()
+    }
+    val effectiveKeyboardHeightDp = (keyboardHeightDp - bottomNavBarInsetDp).coerceAtLeast(0.dp)
 
     val navBarHeight = if (isKeyboardOpen) 22.dp else 44.dp
     val titleFontSize = if (isKeyboardOpen) 12.sp else 24.sp
@@ -151,9 +159,9 @@ fun MaximizedEditScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
+                    .clip(RoundedCornerShape(0.dp))
                     .padding(end = 5.dp)
-                    .padding(top = if (isKeyboardOpen) 0.dp else 35.dp)
-                    .padding(bottom = keyboardHeightDp)
+                    .padding(bottom = effectiveKeyboardHeightDp)
             ) {
                 GeneralEditor(
                     value = tfValue,
@@ -177,7 +185,7 @@ fun MaximizedEditScreen(
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 37.dp, bottom = keyboardHeightDp)
+                .padding(end = 37.dp, bottom = effectiveKeyboardHeightDp + 2.dp)
         ) {
             Box(
                 modifier = Modifier
