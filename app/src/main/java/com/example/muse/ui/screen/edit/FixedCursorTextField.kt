@@ -352,6 +352,7 @@ fun FixedCursorTextField(
                     var lastTapTimeMs = 0L
                     var lastTapX = 0f
                     var lastTapY = 0f
+                    var tapCount = 0
 
                     awaitPointerEventScope {
                         while (true) {
@@ -381,6 +382,7 @@ fun FixedCursorTextField(
                                         val isDoubleTap = now - lastTapTimeMs < ViewConfiguration.getDoubleTapTimeout() &&
                                                 abs(tapPos.x - lastTapX) < touchSlopPx * 3 &&
                                                 abs(tapPos.y - lastTapY) < touchSlopPx * 3
+                                        tapCount = if (isDoubleTap) tapCount + 1 else 1
                                         lastTapTimeMs = now
                                         lastTapX = tapPos.x
                                         lastTapY = tapPos.y
@@ -408,7 +410,13 @@ fun FixedCursorTextField(
                                             r.getOffsetForPosition(Offset(tapX, tapY)).takeIf { it != -1 }
                                         }
 
-                                        if (isDoubleTap && tapOffset != null) {
+                                        if (tapCount == 3) {
+                                            // 三击：全选
+                                            tapCount = 0
+                                            onValueChange(
+                                                currentValue.copy(selection = TextRange(0, currentValue.text.length))
+                                            )
+                                        } else if (tapCount == 2 && tapOffset != null) {
                                             // 双击：选中单词
                                             val bounds = wordBoundaries(currentValue.text, tapOffset)
                                             if (bounds != null) {
@@ -416,7 +424,7 @@ fun FixedCursorTextField(
                                                     currentValue.copy(selection = TextRange(bounds.first, bounds.last + 1))
                                                 )
                                             }
-                                        } else if (!isDoubleTap && tapOffset != null) {
+                                        } else if (tapCount == 1 && tapOffset != null) {
                                             // 单击：设置光标到点击位置
                                             onValueChange(
                                                 currentValue.copy(selection = TextRange(tapOffset))
