@@ -278,8 +278,15 @@ private fun moveCursorLine(direction: Int, current: TextFieldValue, vm: EditorVi
     val sel = current.selection
     val cursorEnd = sel.end.coerceIn(0, text.length)
     val cursorLine = layout.getLineForOffset(cursorEnd)
+    if (direction < 0 && cursorLine == 0) {
+        onResult(current.copy(selection = TextRange(0)))
+        return
+    }
+    if (direction > 0 && cursorLine == layout.lineCount - 1) {
+        onResult(current.copy(selection = TextRange(text.length)))
+        return
+    }
     val targetLine = cursorLine + direction
-    if (targetLine < 0 || targetLine >= layout.lineCount) return
     val cursorRect = layout.getCursorRect(cursorEnd)
     val targetOffset = layout.getOffsetForPosition(Offset(cursorRect.left, layout.getLineTop(targetLine)))
     if (targetOffset != -1) onResult(current.copy(selection = TextRange(targetOffset)))
