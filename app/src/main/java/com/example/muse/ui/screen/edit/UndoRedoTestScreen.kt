@@ -6,7 +6,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -19,8 +18,6 @@ fun UndoRedoTestScreen() {
     var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     val undoManager = remember { UndoRedoManager<TextFieldValue>(maxCapacity = 20) }
 
-    // 用于跳过初始化的自动触发
-    var initialized by remember { mutableStateOf(false) }
 
 
     Column(
@@ -57,7 +54,7 @@ fun UndoRedoTestScreen() {
             onValueChange = { newValue ->
                 Log.d("UndoTest", "onValueChange: 新文本='${newValue.text}'")
 
-                undoManager.push(textFieldValue)// 先保存旧状态，再更新
+                undoManager.push(textFieldValue)
                 textFieldValue = newValue
                 Log.d("UndoTest", "push 后 | Undo栈=${undoManager.undoStackSize}, Redo栈=${undoManager.redoStackSize}")
             },

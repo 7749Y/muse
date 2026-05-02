@@ -8,7 +8,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -181,26 +183,30 @@ fun MaximizedEditScreen(
             }
         }
 
-        // "完成" button — only when keyboard is open
+        // 工具栏 — 键盘打开时显示
         AnimatedVisibility(
             visible = isKeyboardOpen,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 37.dp, bottom = effectiveKeyboardHeightDp + 2.dp)
+                .padding(end = 8.dp, bottom = effectiveKeyboardHeightDp + 2.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .border(1.dp, Color(0xFF949494), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "完成",
-                    color = Color.White,
-                    fontSize = 14.sp
-                )
+                listOf("重做", "←", "↑", "○", "↓", "→", "撤销").forEach { label ->
+                    Box(
+                        modifier = Modifier
+                            .border(1.dp, Color(0xFF949494), RoundedCornerShape(8.dp))
+                            .size(36.dp)
+                            .clickable { /* TODO */ },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(label, color = Color.White, fontSize = 14.sp)
+                    }
+                }
             }
         }
         // Keyboard open button — only when keyboard is closed
