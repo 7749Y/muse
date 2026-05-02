@@ -1,6 +1,7 @@
 package com.example.muse.ui.screen.edit
 
 import android.view.ViewConfiguration
+import androidx.compose.animation.SplineBasedFloatDecayAnimationSpec
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -31,9 +32,12 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.exponentialDecay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -55,6 +59,9 @@ fun FixedCursorTextField(
     var containerHeightPx by remember { mutableStateOf(0f) }
     var scrollOffsetPx by remember { mutableStateOf(0f) }
     var flingVelocityPxPerSec by remember { mutableStateOf(0f) }
+    val scope = rememberCoroutineScope()
+    var flingJob by remember { mutableStateOf<Job?>(null) }
+    val decaySpec = remember { exponentialDecay<Float>() }
     var isDragging by remember { mutableStateOf(false) }
     var isFocused by remember { mutableStateOf(false) }
     var cursorVisible by remember { mutableStateOf(true) }
@@ -363,6 +370,8 @@ fun FixedCursorTextField(
 
                             // 修复：消费按下事件，防止穿透到底层 BasicTextField
                             ch.consume()
+                            // 新触摸手势取消正在进行的 fling
+                            flingJob?.cancel()
 
                             val startPos = ch.position
                             var lastPos = startPos
@@ -434,14 +443,43 @@ fun FixedCursorTextField(
                                         }
                                         focusRequester.requestFocus()
                                     } else {
-                                        // 拖拽结束：计算离手速度（仅关闭输入法时启用 fling）
+                                        // 拖拽结束：计算离手速度并启动 fling 动画（仅关闭输入法时启用）
                                         val velocityPxPerSec = if (!isImeVisible && velSamples.size >= 2) {
                                             val recent = velSamples.takeLast(3)
                                             val totalDelta = recent.sumOf { it.second.toDouble() }.toFloat()
                                             val dtMs = ((recent.last().first - recent.first().first) / 1_000_000f).coerceAtLeast(1f)
                                             -(totalDelta / dtMs) * 1000f
                                         } else 0f
-                                        flingVelocityPxPerSec = velocityPxPerSec
+                                        flingJob?.cancel()
+                                        if (abs(velocityPxPerSec) >= 50f) {
+                                            flingJob = scope.launch {
+                                                try {
+                                                    val startOffset = scrollOffsetPx
+                                                    val textH = adjustedLines?.last()?.bottom
+                                                        ?: textLayoutResult?.size?.height?.toFloat() ?: return@launch
+                                                    val totalH: Float = topPaddingPx + textH + bottomPaddingPx
+                                                    val minSc: Float = if (totalH < containerHeightPx) -(containerHeightPx - totalH) / 2f else -topPaddingPx
+                                                    val maxSc: Float = max(0f, textH + bottomPaddingPx - containerHeightPx)
+                                                    val animatable = Animatable(startOffset)
+                                                    animatable.animateDecay(
+                                                        animationSpec = decaySpec,
+                                                        initialVelocity = velocityPxPerSec
+                                                    ) {
+                                                        scrollOffsetPx = when {
+                                                            this.value < minSc -> minSc
+                                                            this.value > maxSc -> maxSc
+                                                            else -> this.value
+                                                        }
+                                                        editorViewModel?.updateScroll(scrollOffsetPx)
+                                                    }
+                                                    // 动画结束后最终边界约束
+                                                    scrollOffsetPx = if (scrollOffsetPx < minSc) minSc else if (scrollOffsetPx > maxSc) maxSc else scrollOffsetPx
+                                                    editorViewModel?.updateScroll(scrollOffsetPx)
+                                                } catch (_: CancellationException) {
+                                                    // fling 被新手势取消
+                                                }
+                                            }
+                                        }
                                         isDragging = false
                                     }
                                     break
