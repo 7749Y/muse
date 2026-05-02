@@ -189,11 +189,14 @@ fun MaximizedEditScreen(
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 8.dp, bottom = effectiveKeyboardHeightDp + 2.dp)
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .padding(bottom = effectiveKeyboardHeightDp + 2.dp)
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 listOf("重做", "←", "↑", "○", "↓", "→", "撤销").forEach { label ->
@@ -216,7 +219,7 @@ fun MaximizedEditScreen(
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 37.dp, bottom = 22.dp)
+                .padding(end = 22.dp, bottom = 22.dp)
         ) {
             IconButton(
                 onClick = {
