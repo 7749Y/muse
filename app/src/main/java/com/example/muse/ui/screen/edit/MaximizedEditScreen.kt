@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.muse.R
 import com.example.muse.ui.theme.MuseTheme
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun MaximizedEditScreen(
@@ -204,23 +207,27 @@ fun MaximizedEditScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                listOf("重做", "←", "↑", "○", "↓", "→", "撤销").forEach { label ->
-                    Box(
-                        modifier = Modifier
-                            .border(1.dp, Color(0xFF949494), RoundedCornerShape(8.dp))
-                            .size(36.dp)
-                            .clickable {
-                                when (label) {
-                                    "←" -> moveCursor(-1, tfValue) { tfValue = it }
-                                    "→" -> moveCursor(1, tfValue) { tfValue = it }
-                                    "↑" -> moveCursorLine(-1, tfValue, editorViewModel) { tfValue = it }
-                                    "↓" -> moveCursorLine(1, tfValue, editorViewModel) { tfValue = it }
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(label, color = Color.White, fontSize = 14.sp)
-                    }
+                listOf(
+                    "重做" to false,
+                    "←" to true,
+                    "↑" to true,
+                    "○" to false,
+                    "↓" to true,
+                    "→" to true,
+                    "撤销" to false,
+                ).forEach { (label, repeatOnHold) ->
+                    ToolbarButton(
+                        label = label,
+                        repeatOnHold = repeatOnHold,
+                        onAction = {
+                            when (label) {
+                                "←" -> moveCursor(-1, tfValue) { tfValue = it }
+                                "→" -> moveCursor(1, tfValue) { tfValue = it }
+                                "↑" -> moveCursorLine(-1, tfValue, editorViewModel) { tfValue = it }
+                                "↓" -> moveCursorLine(1, tfValue, editorViewModel) { tfValue = it }
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -290,6 +297,55 @@ private fun moveCursorLine(direction: Int, current: TextFieldValue, vm: EditorVi
     val cursorRect = layout.getCursorRect(cursorEnd)
     val targetOffset = layout.getOffsetForPosition(Offset(cursorRect.left, layout.getLineTop(targetLine)))
     if (targetOffset != -1) onResult(current.copy(selection = TextRange(targetOffset)))
+}
+
+// 工具栏按钮（支持长按重复触发）
+@Composable
+private fun ToolbarButton(
+    label: String,
+    repeatOnHold: Boolean,
+    onAction: () -> Unit,
+) {
+    val currentAction by rememberUpdatedState(onAction)
+    Box(
+        modifier = Modifier
+            .border(1.dp, Color(0xFF949494), RoundedCornerShape(8.dp))
+            .size(36.dp)
+            .then(
+                if (repeatOnHold) {
+                    Modifier.pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val ev = awaitPointerEvent()
+                                val ch = ev.changes.firstOrNull() ?: continue
+                                if (!ch.pressed) continue
+                                ch.consume()
+
+                                currentAction()
+
+                                var first = true
+                                while (true) {
+                                    val timeoutMs = if (first) 300L else 80L; first = false
+                                    val mev = withTimeoutOrNull(timeoutMs) { awaitPointerEvent() }
+                                    if (mev != null) {
+                                        val mch = mev.changes.firstOrNull()
+                                        if (mch == null || !mch.pressed) break
+                                        mch.consume()
+                                    } else {
+                                        currentAction()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Modifier.clickable { currentAction() }
+                }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = Color.White, fontSize = 14.sp)
+    }
 }
 
 @Preview(
