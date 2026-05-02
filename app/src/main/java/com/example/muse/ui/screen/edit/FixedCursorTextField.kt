@@ -31,6 +31,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlin.math.abs
@@ -111,12 +112,16 @@ fun FixedCursorTextField(
     }
 
     // Cursor blink
-    LaunchedEffect(isFocused) {
-        if (!isFocused) { cursorVisible = false; return@LaunchedEffect }
-        cursorVisible = true
-        while (true) { delay(530); cursorVisible = !cursorVisible }
-    }
+//    LaunchedEffect(isFocused) {
+//        if (!isFocused) { cursorVisible = false; return@LaunchedEffect }
+//        cursorVisible = true
+//        while (true) { delay(530); cursorVisible = !cursorVisible }
+//    }
 
+// 光标始终显示，不闪烁
+    LaunchedEffect(isFocused) {
+        cursorVisible = isFocused
+    }
     // 将 topPaddingPx 加入依赖，自动居中逻辑也会适配新的上下留白
     LaunchedEffect(
         textLayoutResult,
@@ -277,7 +282,7 @@ fun FixedCursorTextField(
                             }
                         }
                         drawRect(
-                            color = Color(0xFF335EFF),
+                            color = Color(0xFF00BCD4),
                             topLeft = Offset(left, adjTop - scrollOffsetPx),
                             size = Size(right - left, adjBottom - adjTop)
                         )
@@ -332,9 +337,9 @@ fun FixedCursorTextField(
                 } ?: cursorRect.top   // 如果 adjustedLines 为空或取不到，退回原始 top
 
                 drawRect(
-                    color = Color.White,
+                    color = Color(0xFFF44336),
                     topLeft = Offset(cursorRect.left, cursorY - scrollOffsetPx),
-                    size = Size(max(2f, cursorRect.width), cursorRect.height)
+                    size = Size(max(8f, cursorRect.width), cursorRect.height)
                 )
             }
         }
