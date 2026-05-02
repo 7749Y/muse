@@ -54,6 +54,7 @@ fun FixedCursorTextField(
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     var containerHeightPx by remember { mutableStateOf(0f) }
     var scrollOffsetPx by remember { mutableStateOf(0f) }
+    var flingVelocityPxPerSec by remember { mutableStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
     var isFocused by remember { mutableStateOf(false) }
     var cursorVisible by remember { mutableStateOf(true) }
@@ -367,6 +368,7 @@ fun FixedCursorTextField(
                             var lastPos = startPos
                             var totalY = 0f
                             var drag = false
+                            val velSamples = mutableListOf<Pair<Long, Float>>()
 
                             while (true) {
                                 val mev = awaitPointerEvent()
@@ -432,7 +434,14 @@ fun FixedCursorTextField(
                                         }
                                         focusRequester.requestFocus()
                                     } else {
-                                        // 拖拽结束：只结束拖拽状态，不移动光标（修复原 bug）
+                                        // 拖拽结束：计算离手速度（仅关闭输入法时启用 fling）
+                                        val velocityPxPerSec = if (!isImeVisible && velSamples.size >= 2) {
+                                            val recent = velSamples.takeLast(3)
+                                            val totalDelta = recent.sumOf { it.second.toDouble() }.toFloat()
+                                            val dtMs = ((recent.last().first - recent.first().first) / 1_000_000f).coerceAtLeast(1f)
+                                            -(totalDelta / dtMs) * 1000f
+                                        } else 0f
+                                        flingVelocityPxPerSec = velocityPxPerSec
                                         isDragging = false
                                     }
                                     break
@@ -451,6 +460,9 @@ fun FixedCursorTextField(
                                 }
 
                                 if (drag) {
+                                    velSamples.add(System.nanoTime() to delta.y)
+                                    if (velSamples.size > 6) velSamples.removeAt(0)
+
                                     val textH = adjustedLines?.last()?.bottom
                                         ?: textLayoutResult?.size?.height?.toFloat()
                                         ?: continue
