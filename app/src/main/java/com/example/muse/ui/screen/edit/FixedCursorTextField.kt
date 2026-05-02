@@ -286,19 +286,6 @@ fun FixedCursorTextField(
                 }
             }
 
-            // 修复：即便 textLayoutResult 为 null，也尝试绘制占位符
-            if (r == null) {
-                if (placeholderText != null && value.text.isEmpty()) {
-                    val phLayout = textMeasurer.measure(
-                        text = placeholderText,
-                        style = effectiveTextStyle.copy(color = effectiveTextStyle.color.copy()),
-                        constraints = Constraints(maxWidth = size.width.roundToInt())
-                    )
-                    drawText(phLayout, topLeft = Offset(0f, -scrollOffsetPx))
-                }
-                return@Canvas
-            }
-
             // 以下正常绘制
             if (value.text.isNotEmpty()) {
                 if (adjustedLines != null) {
