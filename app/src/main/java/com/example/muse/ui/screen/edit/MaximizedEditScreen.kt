@@ -41,13 +41,11 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -337,39 +335,6 @@ fun MaximizedEditScreen(
 }
 
 // 左右移动光标
-private fun moveCursor(direction: Int, current: TextFieldValue, onResult: (TextFieldValue) -> Unit) {
-    val text = current.text
-    val sel = current.selection
-    if (direction < 0) {
-        val pos = if (!sel.collapsed) sel.min else (sel.start - 1).coerceAtLeast(0)
-        onResult(current.copy(selection = TextRange(pos)))
-    } else {
-        val pos = if (!sel.collapsed) sel.max else (sel.start + 1).coerceAtMost(text.length)
-        onResult(current.copy(selection = TextRange(pos)))
-    }
-}
-
-// 上下移动光标（逐行）
-private fun moveCursorLine(direction: Int, current: TextFieldValue, vm: EditorViewModel, onResult: (TextFieldValue) -> Unit) {
-    val layout = vm.textLayoutResult ?: return
-    val text = current.text
-    val sel = current.selection
-    val cursorEnd = sel.end.coerceIn(0, text.length)
-    val cursorLine = layout.getLineForOffset(cursorEnd)
-    if (direction < 0 && cursorLine == 0) {
-        onResult(current.copy(selection = TextRange(0)))
-        return
-    }
-    if (direction > 0 && cursorLine == layout.lineCount - 1) {
-        onResult(current.copy(selection = TextRange(text.length)))
-        return
-    }
-    val targetLine = cursorLine + direction
-    val cursorRect = layout.getCursorRect(cursorEnd)
-    val targetOffset = layout.getOffsetForPosition(Offset(cursorRect.left, layout.getLineTop(targetLine)))
-    if (targetOffset != -1) onResult(current.copy(selection = TextRange(targetOffset)))
-}
-
 // 工具栏按钮（支持长按重复触发）
 @Composable
 private fun ToolbarButton(

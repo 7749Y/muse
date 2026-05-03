@@ -6,12 +6,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextLayoutResult
 
-data class AdjustedLine(
-    val originalLineIndex: Int,
-    val top: Float,
-    val bottom: Float,
-)
-
 class EditorViewModel {
     var scrollOffsetPx by mutableFloatStateOf(0f)
         private set
