@@ -214,11 +214,11 @@ fun EditScreen(
             },
             items = listOf(
                 RadialMenuItem("列表", R.drawable.ic_list) { editingConfig = listConfig },
-                RadialMenuItem("图片", R.drawable.ic_image) { /* TODO: 添加图片模块 */ },
-                RadialMenuItem("代码块", R.drawable.ic_code) { editingConfig = codeConfig },
                 RadialMenuItem("引用", R.drawable.ic_quote) { editingConfig = quoteConfig },
+                RadialMenuItem("图片", R.drawable.ic_image) { /* TODO: 添加图片模块 */ },
                 RadialMenuItem("表格", R.drawable.ic_table) { /* TODO: 添加表格模块 */ },
                 RadialMenuItem("子标题", R.drawable.ic_subheading) { /* TODO: 添加子标题模块 */ },
+                RadialMenuItem("代码块", R.drawable.ic_code) { editingConfig = codeConfig },
             )
         )
         }
