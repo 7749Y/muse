@@ -1,8 +1,6 @@
 package com.example.muse.ui.screen.edit
 
 import android.view.ViewConfiguration
-import androidx.compose.animation.SplineBasedFloatDecayAnimationSpec
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
@@ -18,29 +16,16 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.exponentialDecay
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -55,14 +40,14 @@ fun FixedCursorTextField(
     paragraphSpacingPx: Float = 0f,
 ) {
     val isImeVisible = WindowInsets.isImeVisible
-    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-    var containerHeightPx by remember { mutableStateOf(0f) }
-    var scrollOffsetPx by remember { mutableStateOf(0f) }
-    var flingVelocityPxPerSec by remember { mutableStateOf(0f) }
     val scope = rememberCoroutineScope()
-    var flingJob by remember { mutableStateOf<Job?>(null) }
-    val decaySpec = remember { exponentialDecay<Float>() }
-    var isDragging by remember { mutableStateOf(false) }
+    val scrollState = remember { EditorScrollState(scope) }
+    var textLayoutResult by scrollState::textLayoutResult
+    var containerHeightPx by scrollState::containerHeightPx
+    var scrollOffsetPx by scrollState::scrollOffsetPx
+    var isDragging by scrollState::isDragging
+    var adjustedLines by scrollState::adjustedLines
+
     var isFocused by remember { mutableStateOf(false) }
     var cursorVisible by remember { mutableStateOf(true) }
     var lineHeightPx by remember { mutableStateOf(0f) } // 新增：记录行高
@@ -96,8 +81,6 @@ fun FixedCursorTextField(
             containerHeightPx
         }
     }
-
-    var adjustedLines by remember { mutableStateOf<List<AdjustedLine>?>(null) }
 
     // 同步调整后的行位置到 ViewModel
     LaunchedEffect(adjustedLines) {
@@ -239,326 +222,30 @@ fun FixedCursorTextField(
         }
 
         // Layer 2: 自定义 Canvas 绘制（文本、行高亮、光标）
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val r = textLayoutResult ?: return@Canvas
-            val cursorPos = value.selection.start.coerceIn(0, value.text.length)
-
-            // ✅ 获取光标所在段落的所有视觉行
-            val paragraphLines = if (value.text.isNotEmpty()) {
-                r.getParagraphLines(cursorPos)
-            } else {
-                IntRange.EMPTY
-            }
-            // 绘制段落高亮（使用调整后的行位置）
-            for (line in paragraphLines) {
-                val (lineTop, lineBottom) = if (adjustedLines != null && line < adjustedLines!!.size) {
-                    val adj = adjustedLines!![line]
-                    adj.top to adj.bottom
-                } else {
-                    r.getLineTop(line) to r.getLineBottom(line)
-                }
-                drawRect(
-                    color = Color(0xFF444444),
-                    topLeft = Offset(0f, lineTop - scrollOffsetPx),
-                    size = Size(size.width, lineBottom - lineTop)
-                )
-            }
-
-            // 绘制选中高亮（蓝色背景）
-            val selStart = value.selection.start
-            val selEnd = value.selection.end
-            if (selStart != selEnd) {
-                val minSel = minOf(selStart, selEnd)
-                val maxSel = maxOf(selStart, selEnd)
-                var off = minSel
-                while (off < maxSel && off < r.layoutInput.text.length) {
-                    val line = r.getLineForOffset(off)
-                    val lineEnd = minOf(r.getLineEnd(line), maxSel)
-                    if (off < lineEnd) {
-                        val startRect = r.getBoundingBox(off)
-                        val endRect = r.getBoundingBox(lineEnd - 1)
-                        val left = startRect.left
-                        val right = endRect.right
-                        val (adjTop, adjBottom) = run {
-                            val sl = adjustedLines
-                            if (sl != null) {
-                                val adj = sl.getOrNull(line)
-                                if (adj != null) adj.top to adj.bottom
-                                else r.getLineTop(line) to r.getLineBottom(line)
-                            } else {
-                                r.getLineTop(line) to r.getLineBottom(line)
-                            }
-                        }
-                        drawRect(
-                            color = Color(0xFF00BCD4),
-                            topLeft = Offset(left, adjTop - scrollOffsetPx),
-                            size = Size(right - left, adjBottom - adjTop)
-                        )
-                    }
-                    off = lineEnd
-                }
-            }
-
-            // 以下正常绘制
-            if (value.text.isNotEmpty()) {
-                if (adjustedLines != null) {
-                    // 逐行测量绘制，每行出现在调整后的 Y 位置
-                    for (adj in adjustedLines) {
-                        if (adj.originalLineIndex !in 0 until r.lineCount) continue
-                        val start = r.getLineStart(adj.originalLineIndex)
-                        val end = r.getLineEnd(adj.originalLineIndex)
-                        val lineText = r.layoutInput.text.substring(start, end).trimEnd('\n')
-                        val lineLayout = textMeasurer.measure(
-                            text = lineText,
-                            style = effectiveTextStyle,
-                            constraints = Constraints(maxWidth = size.width.roundToInt())
-                        )
-                        val adjVisTop = adj.top - scrollOffsetPx
-                        val adjVisBottom = adj.bottom - scrollOffsetPx
-                        if (adjVisBottom < 0 || adjVisTop > size.height) continue
-                        drawText(
-                            lineLayout,
-                            topLeft = Offset(r.getLineLeft(adj.originalLineIndex), adjVisTop)
-                        )
-                    }
-                } else {
-                    drawText(r, topLeft = Offset(0f, -scrollOffsetPx))
-                }
-            } else if (placeholderText != null) {
-                // 空文本时绘制占位符
-                val phLayout = textMeasurer.measure(
-                    text = placeholderText,
-                    style = effectiveTextStyle.copy(color = effectiveTextStyle.color.copy(alpha = 0.5F)),
-                    constraints = Constraints(maxWidth = size.width.roundToInt())
-                )
-                drawText(phLayout, topLeft = Offset(0f, -scrollOffsetPx))
-            }
-
-            // 绘制 IME composition 下划线
-            val composition = value.composition
-            if (composition != null && composition.start >= 0 && composition.end <= value.text.length && !composition.collapsed) {
-                val compMin = composition.min
-                val compMax = composition.max
-                var off = compMin
-                while (off < compMax) {
-                    val line = r.getLineForOffset(off)
-                    val lineEnd = minOf(r.getLineEnd(line), compMax)
-                    if (off < lineEnd) {
-                        val startRect = r.getBoundingBox(off)
-                        val endRect = r.getBoundingBox(lineEnd - 1)
-                        val left = startRect.left
-                        val right = endRect.right
-
-                        val adjBottom = run {
-                            val sl = adjustedLines
-                            if (sl != null) {
-                                val adj = sl.getOrNull(line)
-                                if (adj != null) adj.bottom
-                                else r.getLineBottom(line)
-                            } else {
-                                r.getLineBottom(line)
-                            }
-                        }
-
-                        drawLine(
-                            color = Color(0xFFFF7F7F),
-                            start = Offset(left, adjBottom - scrollOffsetPx),
-                            end = Offset(right, adjBottom - scrollOffsetPx),
-                            strokeWidth = 1.5f
-                        )
-                    }
-                    off = lineEnd
-                }
-            }
-
-            // 光标绘制
-            if (isFocused && cursorVisible && cursorPos <= r.layoutInput.text.length) {
-                val cursorRect = r.getCursorRect(cursorPos)
-                val cursorY = adjustedLines?.let { lines ->
-                    val cursorLine = r.getLineForOffset(cursorPos)
-                    lines.getOrNull(cursorLine)?.let { adj ->
-                        adj.top + (cursorRect.top - r.getLineTop(cursorLine))
-                    }
-                } ?: cursorRect.top   // 如果 adjustedLines 为空或取不到，退回原始 top
-
-                drawRect(
-                    color = Color(0xFFFF7F7F),
-                    topLeft = Offset(cursorRect.left, cursorY - scrollOffsetPx),
-                    size = Size(max(8f, cursorRect.width), cursorRect.height)
-                )
-            }
-        }
+        EditorCanvas(
+            textLayoutResult = textLayoutResult,
+            scrollOffsetPx = scrollOffsetPx,
+            adjustedLines = adjustedLines,
+            value = value,
+            isFocused = isFocused,
+            cursorVisible = cursorVisible,
+            textMeasurer = textMeasurer,
+            effectiveTextStyle = effectiveTextStyle,
+            placeholderText = placeholderText,
+            modifier = Modifier.fillMaxSize(),
+        )
 
         // Layer 3: 触摸处理（点击选光标、拖拽滚动）
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    var lastTapTimeMs = 0L
-                    var lastTapX = 0f
-                    var lastTapY = 0f
-                    var tapCount = 0
-
-                    awaitPointerEventScope {
-                        while (true) {
-                            val ev = awaitPointerEvent()
-                            val ch = ev.changes.firstOrNull() ?: continue
-                            if (!ch.pressed) continue
-
-                            // 修复：消费按下事件，防止穿透到底层 BasicTextField
-                            ch.consume()
-                            // 新触摸手势取消正在进行的 fling
-                            flingJob?.cancel()
-
-                            val startPos = ch.position
-                            var lastPos = startPos
-                            var totalY = 0f
-                            var drag = false
-                            val velSamples = mutableListOf<Pair<Long, Float>>()
-
-                            while (true) {
-                                val mev = awaitPointerEvent()
-                                val mch = mev.changes.firstOrNull() ?: break
-
-                                if (!mch.pressed) {
-                                    // 修复：消费抬起事件
-                                    mch.consume()
-
-                                    if (!drag) {
-                                        val now = System.currentTimeMillis()
-                                        val tapPos = mch.position
-                                        val isDoubleTap = now - lastTapTimeMs < ViewConfiguration.getDoubleTapTimeout() &&
-                                                abs(tapPos.x - lastTapX) < touchSlopPx * 3 &&
-                                                abs(tapPos.y - lastTapY) < touchSlopPx * 3
-                                        tapCount = if (isDoubleTap) tapCount + 1 else 1
-                                        lastTapTimeMs = now
-                                        lastTapX = tapPos.x
-                                        lastTapY = tapPos.y
-
-                                        // 计算点击位置的字符偏移（双击和单击共享）
-                                        val tapOffset = textLayoutResult?.let { r ->
-                                            val tapX = tapPos.x.coerceIn(0f, r.size.width.toFloat())
-                                            val tapAdjustedY = tapPos.y + scrollOffsetPx
-                                            val cal2 = currentAdjustedLines
-                                            val adjLine = cal2?.firstOrNull { tapAdjustedY in it.top..it.bottom }
-                                            val tapY = if (adjLine != null) {
-                                                r.getLineTop(adjLine.originalLineIndex) + (tapAdjustedY - adjLine.top)
-                                            } else if (!cal2.isNullOrEmpty()) {
-                                                val nearest = cal2.minByOrNull { abs(it.top + (it.bottom - it.top) / 2f - tapAdjustedY) }
-                                                if (nearest != null) {
-                                                    val centerY = nearest.top + (nearest.bottom - nearest.top) / 2f
-                                                    val mappedY = if (tapAdjustedY <= centerY) nearest.bottom - 1f else nearest.top
-                                                    r.getLineTop(nearest.originalLineIndex) + (mappedY - nearest.top)
-                                                } else {
-                                                    tapAdjustedY.coerceIn(0f, r.size.height.toFloat())
-                                                }
-                                            } else {
-                                                tapAdjustedY.coerceIn(0f, r.size.height.toFloat())
-                                            }
-                                            r.getOffsetForPosition(Offset(tapX, tapY)).takeIf { it != -1 }
-                                        }
-
-                                        if (tapCount == 3) {
-                                            // 三击：全选
-                                            tapCount = 0
-                                            onValueChange(
-                                                currentValue.copy(selection = TextRange(0, currentValue.text.length))
-                                            )
-                                        } else if (tapCount == 2 && tapOffset != null) {
-                                            // 双击：选中单词
-                                            val bounds = wordBoundaries(currentValue.text, tapOffset)
-                                            if (bounds != null) {
-                                                onValueChange(
-                                                    currentValue.copy(selection = TextRange(bounds.first, bounds.last + 1))
-                                                )
-                                            }
-                                        } else if (tapCount == 1 && tapOffset != null) {
-                                            // 单击：设置光标到点击位置
-                                            onValueChange(
-                                                currentValue.copy(selection = TextRange(tapOffset))
-                                            )
-                                        }
-                                        focusRequester.requestFocus()
-                                    } else {
-                                        // 拖拽结束：计算离手速度并启动 fling 动画（仅关闭输入法时启用）
-                                        val velocityPxPerSec = if (!isImeVisible && velSamples.size >= 2) {
-                                            val recent = velSamples.takeLast(3)
-                                            val totalDelta = recent.sumOf { it.second.toDouble() }.toFloat()
-                                            val dtMs = ((recent.last().first - recent.first().first) / 1_000_000f).coerceAtLeast(1f)
-                                            -(totalDelta / dtMs) * 1000f
-                                        } else 0f
-                                        flingJob?.cancel()
-                                        if (abs(velocityPxPerSec) >= 50f) {
-                                            flingJob = scope.launch {
-                                                try {
-                                                    val startOffset = scrollOffsetPx
-                                                    val textH = adjustedLines?.last()?.bottom
-                                                        ?: textLayoutResult?.size?.height?.toFloat() ?: return@launch
-                                                    val totalH: Float = topPaddingPx + textH + bottomPaddingPx
-                                                    val minSc: Float = if (totalH < containerHeightPx) -(containerHeightPx - totalH) / 2f else -topPaddingPx
-                                                    val maxSc: Float = max(0f, textH + bottomPaddingPx - containerHeightPx)
-                                                    val animatable = Animatable(startOffset)
-                                                    animatable.animateDecay(
-                                                        animationSpec = decaySpec,
-                                                        initialVelocity = velocityPxPerSec
-                                                    ) {
-                                                        scrollOffsetPx = when {
-                                                            this.value < minSc -> minSc
-                                                            this.value > maxSc -> maxSc
-                                                            else -> this.value
-                                                        }
-                                                        editorViewModel?.updateScroll(scrollOffsetPx)
-                                                    }
-                                                    // 动画结束后最终边界约束
-                                                    scrollOffsetPx = if (scrollOffsetPx < minSc) minSc else if (scrollOffsetPx > maxSc) maxSc else scrollOffsetPx
-                                                    editorViewModel?.updateScroll(scrollOffsetPx)
-                                                } catch (_: CancellationException) {
-                                                    // fling 被新手势取消
-                                                }
-                                            }
-                                        }
-                                        isDragging = false
-                                    }
-                                    break
-                                }
-
-                                // 修复：消费移动事件
-                                mch.consume()
-
-                                val delta = mch.position - lastPos
-                                lastPos = mch.position
-                                totalY += delta.y
-
-                                if (!drag && abs(totalY) > touchSlopPx) {
-                                    drag = true
-                                    isDragging = true
-                                }
-
-                                if (drag) {
-                                    velSamples.add(System.nanoTime() to delta.y)
-                                    if (velSamples.size > 6) velSamples.removeAt(0)
-
-                                    val textH = adjustedLines?.last()?.bottom
-                                        ?: textLayoutResult?.size?.height?.toFloat()
-                                        ?: continue
-                                    // 应用顶部/底部留白限制
-                                    val totalH = topPaddingPx + textH + bottomPaddingPx
-                                    val minSc = if (totalH < containerHeightPx) {
-                                        -(containerHeightPx - totalH) / 2f
-                                    } else {
-                                        -topPaddingPx
-                                    }
-                                    val maxSc = max(0f, textH + bottomPaddingPx - containerHeightPx)
-
-                                    // 修复：滚动方向
-                                    scrollOffsetPx =
-                                        (scrollOffsetPx - delta.y).coerceIn(minSc, maxSc)
-                                    editorViewModel?.updateScroll(scrollOffsetPx)
-                                }
-                            }
-                        }
-                    }
-                }
+        EditorTouchHandler(
+            scrollState = scrollState,
+            value = value,
+            onValueChange = onValueChange,
+            focusRequester = focusRequester,
+            isImeVisible = isImeVisible,
+            touchSlopPx = touchSlopPx,
+            topPaddingPx = topPaddingPx,
+            bottomPaddingPx = bottomPaddingPx,
+            editorViewModel = editorViewModel,
         )
     }
 }

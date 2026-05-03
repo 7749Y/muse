@@ -334,56 +334,6 @@ fun MaximizedEditScreen(
 
 }
 
-// 左右移动光标
-// 工具栏按钮（支持长按重复触发）
-@Composable
-private fun ToolbarButton(
-    label: String,
-    repeatOnHold: Boolean,
-    onAction: () -> Unit,
-) {
-    val currentAction by rememberUpdatedState(onAction)
-    Box(
-        modifier = Modifier
-            .border(1.dp, Color(0xFF949494), RoundedCornerShape(8.dp))
-            .size(36.dp)
-            .then(
-                if (repeatOnHold) {
-                    Modifier.pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val ev = awaitPointerEvent()
-                                val ch = ev.changes.firstOrNull() ?: continue
-                                if (!ch.pressed) continue
-                                ch.consume()
-
-                                currentAction()
-
-                                var first = true
-                                while (true) {
-                                    val timeoutMs = if (first) 200L else 80L; first = false
-                                    val mev = withTimeoutOrNull(timeoutMs) { awaitPointerEvent() }
-                                    if (mev != null) {
-                                        val mch = mev.changes.firstOrNull()
-                                        if (mch == null || !mch.pressed) break
-                                        mch.consume()
-                                    } else {
-                                        currentAction()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    Modifier.clickable { currentAction() }
-                }
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(label, color = Color.White, fontSize = 14.sp)
-    }
-}
-
 @Preview(
     showBackground = true,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
