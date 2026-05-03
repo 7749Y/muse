@@ -45,12 +45,12 @@ data class RadialMenuItem(
  *
  * 按下中心按钮后立即滑动，滑动方向的按钮即时出现，松手触发该按钮。
  * 仅轻触（不滑动）时不做任何事，保留给调用方处理。
- * 0° = 正上方，顺时针排列。
+ * 0° = 水平向左，顺时针排列。
  */
 @Composable
 fun RadialMenu(
     modifier: Modifier = Modifier,
-    radius: Dp = 100.dp,
+    radius: Dp = 72.dp,
     centerButton: @Composable () -> Unit,
     items: List<RadialMenuItem>,
 ) {
@@ -77,8 +77,8 @@ fun RadialMenu(
             items.forEachIndexed { index, item ->
                 val angleDeg = startAngle + index * stepAngle
                 val rad = angleDeg * PI / 180.0
-                val ox = (radiusPx * sin(rad)).roundToInt()
-                val oy = (-radiusPx * cos(rad)).roundToInt()
+                val ox = (-radiusPx * cos(rad)).roundToInt()
+                val oy = (-radiusPx * sin(rad)).roundToInt()
 
                 Box(
                     modifier = Modifier
@@ -149,10 +149,10 @@ fun RadialMenu(
                                     val ry = mch.position.y - cy
                                     val rDist = sqrt(rx * rx + ry * ry)
 
-                                    val innerR = 16.dp.toPx()
+                                    val innerR = 28.dp.toPx()
                                     val outerR = radiusPx + 24.dp.toPx()
                                     selectedIndex = if (rDist in innerR..outerR) {
-                                        val rawAngle = atan2(rx, -ry) * 180f / PI.toFloat()
+                                        val rawAngle = atan2(-ry, -rx) * 180f / PI.toFloat()
                                         val norm = ((rawAngle - startAngle) % 360f + 360f) % 360f
                                         (norm / stepAngle).roundToInt().coerceIn(0, items.size - 1)
                                     } else -1
