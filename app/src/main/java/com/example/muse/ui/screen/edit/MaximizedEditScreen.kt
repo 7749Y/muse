@@ -57,7 +57,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.muse.R
 import com.example.muse.ui.theme.MuseTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.abs
 
 @Composable
 fun MaximizedEditScreen(
@@ -74,6 +76,40 @@ fun MaximizedEditScreen(
     val view = LocalView.current
     var keyboardHeightDp by remember { mutableStateOf(0.dp) }
     var isKeyboardOpen by remember { mutableStateOf(false) }
+
+    // 摇杆状态：归一化方向向量（-1..1），松手时为 (0,0)
+    var joystickDx by remember { mutableStateOf(0f) }
+    var joystickDy by remember { mutableStateOf(0f) }
+
+    val currentTf by rememberUpdatedState(tfValue)
+    val currentVm by rememberUpdatedState(editorViewModel)
+
+    // 摇杆方向 → 光标自动重复移动
+    LaunchedEffect(joystickDx, joystickDy) {
+        val threshold = 0.3f
+        if (abs(joystickDx) < threshold && abs(joystickDy) < threshold) return@LaunchedEffect
+
+        // 立即触发第一次移动
+        val handler: (TextFieldValue) -> Unit = { tfValue = it }
+        val isHorizontal = abs(joystickDx) > abs(joystickDy)
+        if (isHorizontal) {
+            if (joystickDx < 0) moveCursor(-1, currentTf, handler) else moveCursor(1, currentTf, handler)
+        } else {
+            if (joystickDy < 0) moveCursorLine(-1, currentTf, currentVm, handler) else moveCursorLine(1, currentTf, currentVm, handler)
+        }
+
+        delay(200L) // 初始延迟
+
+        while (true) {
+            if (abs(joystickDx) < threshold && abs(joystickDy) < threshold) break
+            if (isHorizontal) {
+                if (joystickDx < 0) moveCursor(-1, currentTf, handler) else moveCursor(1, currentTf, handler)
+            } else {
+                if (joystickDy < 0) moveCursorLine(-1, currentTf, currentVm, handler) else moveCursorLine(1, currentTf, currentVm, handler)
+            }
+            delay(80L)
+        }
+    }
 
     // Detect keyboard open/close via ViewTreeObserver
     DisposableEffect(view) {
@@ -207,28 +243,42 @@ fun MaximizedEditScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                listOf(
-                    "重做" to false,
-                    "←" to true,
-                    "↑" to true,
-                    "○" to false,
-                    "↓" to true,
-                    "→" to true,
-                    "撤销" to false,
-                ).forEach { (label, repeatOnHold) ->
-                    ToolbarButton(
-                        label = label,
-                        repeatOnHold = repeatOnHold,
-                        onAction = {
-                            when (label) {
-                                "←" -> moveCursor(-1, tfValue) { tfValue = it }
-                                "→" -> moveCursor(1, tfValue) { tfValue = it }
-                                "↑" -> moveCursorLine(-1, tfValue, editorViewModel) { tfValue = it }
-                                "↓" -> moveCursorLine(1, tfValue, editorViewModel) { tfValue = it }
-                            }
-                        }
-                    )
-                }
+                ToolbarButton(
+                    label = "重做",
+                    repeatOnHold = false,
+                    onAction = { /* TODO: 撤销重做 */ }
+                )
+                ToolbarButton(
+                    label = "←",
+                    repeatOnHold = true,
+                    onAction = { moveCursor(-1, tfValue) { tfValue = it } }
+                )
+                ToolbarButton(
+                    label = "↑",
+                    repeatOnHold = true,
+                    onAction = { moveCursorLine(-1, tfValue, editorViewModel) { tfValue = it } }
+                )
+                JoystickButton(
+                    onJoystickMove = { dx, dy ->
+                        joystickDx = dx
+                        joystickDy = dy
+                    }
+                )
+                ToolbarButton(
+                    label = "↓",
+                    repeatOnHold = true,
+                    onAction = { moveCursorLine(1, tfValue, editorViewModel) { tfValue = it } }
+                )
+                ToolbarButton(
+                    label = "→",
+                    repeatOnHold = true,
+                    onAction = { moveCursor(1, tfValue) { tfValue = it } }
+                )
+                ToolbarButton(
+                    label = "撤销",
+                    repeatOnHold = false,
+                    onAction = { /* TODO: 撤销重做 */ }
+                )
             }
         }
         // Keyboard open button — only when keyboard is closed
@@ -325,7 +375,7 @@ private fun ToolbarButton(
 
                                 var first = true
                                 while (true) {
-                                    val timeoutMs = if (first) 300L else 80L; first = false
+                                    val timeoutMs = if (first) 200L else 80L; first = false
                                     val mev = withTimeoutOrNull(timeoutMs) { awaitPointerEvent() }
                                     if (mev != null) {
                                         val mch = mev.changes.firstOrNull()
