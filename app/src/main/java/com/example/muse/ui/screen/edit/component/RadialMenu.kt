@@ -3,7 +3,6 @@ package com.example.muse.ui.screen.edit.component
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -33,6 +32,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 data class RadialMenuItem(
     val label: String,
@@ -43,7 +43,8 @@ data class RadialMenuItem(
 /**
  * 径向菜单组件。
  *
- * 长按中心按钮展开环绕菜单，拖拽到目标项上松手触发。
+ * 按下中心按钮后立即滑动，滑动方向的按钮即时出现，松手触发该按钮。
+ * 仅轻触（不滑动）时不做任何事，保留给调用方处理。
  * 0° = 正上方，顺时针排列。
  */
 @Composable
@@ -59,6 +60,7 @@ fun RadialMenu(
     val radiusPx = with(density) { radius.toPx() }
     val stepAngle = 360f / items.size
     val startAngle = 0f
+    val touchSlopPx = with(density) { 8.dp.toPx() }
 
     var expanded by remember { mutableStateOf(false) }
     var selectedIndex by remember { mutableIntStateOf(-1) }
@@ -96,41 +98,68 @@ fun RadialMenu(
             }
         }
 
-        // 中心按钮
+        // 中心按钮 —— 手势：按下立刻滑动 → 菜单出现 → 松手触发
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .onSizeChanged { centerSize = it }
                 .pointerInput(items) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = {
-                            expanded = true
-                            selectedIndex = -1
-                        },
-                        onDrag = { change, _ ->
-                            val cx = centerSize.width / 2f
-                            val cy = centerSize.height / 2f
-                            val dx = change.position.x - cx
-                            val dy = change.position.y - cy
-                            val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+                    awaitPointerEventScope {
+                        while (true) {
+                            val ev = awaitPointerEvent()
+                            val ch = ev.changes.firstOrNull() ?: continue
+                            if (!ch.pressed) continue
+                            ch.consume()
 
-                            // 有效环形区域：内圈避免误触中心，外圈避免误触远处
-                            val innerR = 16.dp.toPx()
-                            val outerR = radiusPx + 24.dp.toPx()
-                            selectedIndex = if (dist in innerR..outerR) {
-                                val rawAngle = atan2(dx, -dy) * 180f / PI.toFloat()
-                                val norm = ((rawAngle - startAngle) % 360f + 360f) % 360f
-                                (norm / stepAngle).roundToInt().coerceIn(0, items.size - 1)
-                            } else -1
-                        },
-                        onDragEnd = {
-                            if (selectedIndex in items.indices) {
-                                items[selectedIndex].onClick()
+                            val startPos = ch.position
+                            var isDragging = false
+
+                            while (true) {
+                                val mev = awaitPointerEvent()
+                                val mch = mev.changes.firstOrNull() ?: break
+
+                                if (!mch.pressed) {
+                                    mch.consume()
+                                    // 松手：如果处于拖拽模式则触发选中项
+                                    if (isDragging && selectedIndex in items.indices) {
+                                        items[selectedIndex].onClick()
+                                    }
+                                    expanded = false
+                                    selectedIndex = -1
+                                    break
+                                }
+
+                                mch.consume()
+                                val dx = mch.position.x - startPos.x
+                                val dy = mch.position.y - startPos.y
+                                val dist = sqrt(dx * dx + dy * dy)
+
+                                if (!isDragging) {
+                                    if (dist > touchSlopPx) {
+                                        isDragging = true
+                                        expanded = true
+                                        selectedIndex = -1
+                                    }
+                                }
+
+                                if (isDragging) {
+                                    val cx = centerSize.width / 2f
+                                    val cy = centerSize.height / 2f
+                                    val rx = mch.position.x - cx
+                                    val ry = mch.position.y - cy
+                                    val rDist = sqrt(rx * rx + ry * ry)
+
+                                    val innerR = 16.dp.toPx()
+                                    val outerR = radiusPx + 24.dp.toPx()
+                                    selectedIndex = if (rDist in innerR..outerR) {
+                                        val rawAngle = atan2(rx, -ry) * 180f / PI.toFloat()
+                                        val norm = ((rawAngle - startAngle) % 360f + 360f) % 360f
+                                        (norm / stepAngle).roundToInt().coerceIn(0, items.size - 1)
+                                    } else -1
+                                }
                             }
-                            expanded = false
-                        },
-                        onDragCancel = { expanded = false }
-                    )
+                        }
+                    }
                 },
             content = { centerButton() }
         )
