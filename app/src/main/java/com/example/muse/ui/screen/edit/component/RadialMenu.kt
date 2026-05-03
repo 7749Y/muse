@@ -154,7 +154,7 @@ fun RadialMenu(
                                     selectedIndex = if (rDist in innerR..outerR) {
                                         val rawAngle = atan2(-ry, -rx) * 180f / PI.toFloat()
                                         val norm = ((rawAngle - startAngle) % 360f + 360f) % 360f
-                                        (norm / stepAngle).roundToInt().coerceIn(0, items.size - 1)
+                                        (norm / stepAngle).roundToInt().mod(items.size)
                                     } else -1
                                 }
                             }
