@@ -71,7 +71,12 @@ fun MaximizedEditScreen(
     var tfValue by remember { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
     val editorViewModel = remember { EditorViewModel() }
-    val undoManager = remember { UndoRedoManager<TextFieldValue>(maxCapacity = 50) }
+    val undoManager = remember {
+        UndoRedoManager<TextFieldValue>(maxCapacity = 50) { a, b ->
+            a.text == b.text && a.selection == b.selection
+        }
+    }
+    var isUndoRedoing by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
     val view = LocalView.current
@@ -213,7 +218,11 @@ fun MaximizedEditScreen(
                 GeneralEditor(
                     value = tfValue,
                     onValueChange = { newValue ->
-                        undoManager.push(tfValue)
+                        val actualChange = newValue.text != tfValue.text ||
+                                newValue.selection != tfValue.selection
+                        if (actualChange && !isUndoRedoing) {
+                            undoManager.push(tfValue)
+                        }
                         tfValue = newValue
                     },
                     modifier = Modifier
@@ -251,7 +260,9 @@ fun MaximizedEditScreen(
                     label = "重做",
                     repeatOnHold = false,
                     onAction = {
+                        isUndoRedoing = true
                         undoManager.redo(tfValue)?.let { next -> tfValue = next }
+                        isUndoRedoing = false
                     }
                 )
                 ToolbarButton(
@@ -284,7 +295,9 @@ fun MaximizedEditScreen(
                     label = "撤销",
                     repeatOnHold = false,
                     onAction = {
+                        isUndoRedoing = true
                         undoManager.undo(tfValue)?.let { previous -> tfValue = previous }
+                        isUndoRedoing = false
                     }
                 )
             }
