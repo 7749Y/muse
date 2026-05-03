@@ -71,6 +71,7 @@ fun MaximizedEditScreen(
     var tfValue by remember { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
     val editorViewModel = remember { EditorViewModel() }
+    val undoManager = remember { UndoRedoManager<TextFieldValue>(maxCapacity = 50) }
 
     val density = LocalDensity.current
     val view = LocalView.current
@@ -211,7 +212,10 @@ fun MaximizedEditScreen(
             ) {
                 GeneralEditor(
                     value = tfValue,
-                    onValueChange = { tfValue = it },
+                    onValueChange = { newValue ->
+                        undoManager.push(tfValue)
+                        tfValue = newValue
+                    },
                     modifier = Modifier
                         .fillMaxSize(),
                     gutterProvider = { GutterItem.Number(it + 1) },
@@ -246,7 +250,9 @@ fun MaximizedEditScreen(
                 ToolbarButton(
                     label = "重做",
                     repeatOnHold = false,
-                    onAction = { /* TODO: 撤销重做 */ }
+                    onAction = {
+                        undoManager.redo(tfValue)?.let { next -> tfValue = next }
+                    }
                 )
                 ToolbarButton(
                     label = "←",
@@ -277,7 +283,9 @@ fun MaximizedEditScreen(
                 ToolbarButton(
                     label = "撤销",
                     repeatOnHold = false,
-                    onAction = { /* TODO: 撤销重做 */ }
+                    onAction = {
+                        undoManager.undo(tfValue)?.let { previous -> tfValue = previous }
+                    }
                 )
             }
         }
