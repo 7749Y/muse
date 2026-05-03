@@ -72,7 +72,7 @@ fun MaximizedEditScreen(
     val focusRequester = remember { FocusRequester() }
     val editorViewModel = remember { EditorViewModel() }
     val undoManager = remember {
-        UndoRedoManager<TextFieldValue>(maxCapacity = 50) { a, b ->
+        UndoRedoManager<TextFieldValue>(maxCapacity = 500) { a, b ->
             a.text == b.text && a.selection == b.selection
         }
     }

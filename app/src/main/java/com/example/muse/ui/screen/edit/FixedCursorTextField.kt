@@ -334,6 +334,43 @@ fun FixedCursorTextField(
                 drawText(phLayout, topLeft = Offset(0f, -scrollOffsetPx))
             }
 
+            // 绘制 IME composition 下划线
+            val composition = value.composition
+            if (composition != null && composition.start >= 0 && composition.end <= value.text.length && !composition.collapsed) {
+                val compMin = composition.min
+                val compMax = composition.max
+                var off = compMin
+                while (off < compMax) {
+                    val line = r.getLineForOffset(off)
+                    val lineEnd = minOf(r.getLineEnd(line), compMax)
+                    if (off < lineEnd) {
+                        val startRect = r.getBoundingBox(off)
+                        val endRect = r.getBoundingBox(lineEnd - 1)
+                        val left = startRect.left
+                        val right = endRect.right
+
+                        val adjBottom = run {
+                            val sl = adjustedLines
+                            if (sl != null) {
+                                val adj = sl.getOrNull(line)
+                                if (adj != null) adj.bottom
+                                else r.getLineBottom(line)
+                            } else {
+                                r.getLineBottom(line)
+                            }
+                        }
+
+                        drawLine(
+                            color = Color(0xFFFF7F7F),
+                            start = Offset(left, adjBottom - scrollOffsetPx),
+                            end = Offset(right, adjBottom - scrollOffsetPx),
+                            strokeWidth = 1.5f
+                        )
+                    }
+                    off = lineEnd
+                }
+            }
+
             // 光标绘制
             if (isFocused && cursorVisible && cursorPos <= r.layoutInput.text.length) {
                 val cursorRect = r.getCursorRect(cursorPos)
@@ -345,7 +382,7 @@ fun FixedCursorTextField(
                 } ?: cursorRect.top   // 如果 adjustedLines 为空或取不到，退回原始 top
 
                 drawRect(
-                    color = Color(0xFFF44336),
+                    color = Color(0xFFFF7F7F),
                     topLeft = Offset(cursorRect.left, cursorY - scrollOffsetPx),
                     size = Size(max(8f, cursorRect.width), cursorRect.height)
                 )
