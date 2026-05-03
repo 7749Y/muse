@@ -42,6 +42,7 @@ private data class EditorConfig(
     val title: String,
     val gutterProvider: (Int) -> GutterItem,
     val textStyle: TextStyle,
+    val paragraphSpacingPx: Float = 50f,
 )
 
 private val listConfig = EditorConfig(
@@ -61,7 +62,8 @@ private val codeConfig = EditorConfig(
         color = Color.White,
         fontSize = 16.sp,
         fontWeight = FontWeight.Normal
-    )
+    ),
+    paragraphSpacingPx = 0f,
 )
 
 private val quoteConfig = EditorConfig(
@@ -71,7 +73,8 @@ private val quoteConfig = EditorConfig(
         color = Color.White,
         fontSize = 24.sp,
         fontWeight = FontWeight.SemiBold
-    )
+    ),
+    paragraphSpacingPx = 20f,
 )
 
 @Composable
@@ -90,6 +93,7 @@ fun EditScreen(
             onDoneClick = { editingConfig = null },
             gutterProvider = config.gutterProvider,
             textStyle = config.textStyle,
+            paragraphSpacingPx = config.paragraphSpacingPx,
             modifier = modifier,
         )
     } else {

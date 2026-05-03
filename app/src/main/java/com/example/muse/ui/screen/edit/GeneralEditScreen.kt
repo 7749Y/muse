@@ -73,6 +73,7 @@ fun GeneralEditScreen(
         fontSize = 14.sp,
         fontWeight = FontWeight.SemiBold
     ),
+    paragraphSpacingPx: Float = 50f,
 ) {
     var tfValue by remember { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
@@ -236,7 +237,7 @@ fun GeneralEditScreen(
                     gutterProvider = gutterProvider,
                     textStyle = textStyle,
                     placeholderText = "输入内容...",
-                    paragraphSpacingPx = 50f,
+                    paragraphSpacingPx = paragraphSpacingPx,
                     editorViewModel = editorViewModel,
                 )
             }
