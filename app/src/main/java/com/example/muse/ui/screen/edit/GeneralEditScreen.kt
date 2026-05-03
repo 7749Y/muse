@@ -15,8 +15,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,7 +40,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.Alignment
@@ -52,7 +49,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -63,15 +59,20 @@ import androidx.compose.ui.unit.sp
 import com.example.muse.R
 import com.example.muse.ui.theme.MuseTheme
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 
 @Composable
-fun MaximizedEditScreen(
+fun GeneralEditScreen(
     title: String = "标题",
     onBackClick: () -> Unit = {},
     onDoneClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    gutterProvider: (lineIndex: Int) -> GutterItem = { GutterItem.Number(it + 1) },
+    textStyle: TextStyle = TextStyle(
+        color = Color.White,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold
+    ),
 ) {
     var tfValue by remember { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
@@ -232,12 +233,8 @@ fun MaximizedEditScreen(
                     },
                     modifier = Modifier
                         .fillMaxSize(),
-                    gutterProvider = { GutterItem.Number(it + 1) },
-                    textStyle = TextStyle(
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    ),
+                    gutterProvider = gutterProvider,
+                    textStyle = textStyle,
                     placeholderText = "输入内容...",
                     paragraphSpacingPx = 50f,
                     editorViewModel = editorViewModel,
@@ -347,8 +344,8 @@ fun MaximizedEditScreen(
     backgroundColor = 0xFF1E1E1E
 )
 @Composable
-private fun MaximizedEditScreenPreview() {
+private fun GeneralEditScreenPreview() {
     MuseTheme(darkTheme = true) {
-        MaximizedEditScreen()
+        GeneralEditScreen()
     }
 }
