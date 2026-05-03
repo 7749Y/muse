@@ -3,7 +3,8 @@ package com.example.muse.ui.screen.edit
 import android.util.Log
 
 class UndoRedoManager<T>(
-    private val maxCapacity: Int = 100
+    private val maxCapacity: Int = 100,
+    private val areEquivalent: (T, T) -> Boolean = { a, b -> a == b }
 ) {
     val undoStack = ArrayDeque<T>()
     val redoStack = ArrayDeque<T>()
@@ -12,11 +13,12 @@ class UndoRedoManager<T>(
     val redoStackSize: Int get() = redoStack.size
 
     fun push(state: T) {
-        if (undoStack.isNotEmpty() && undoStack.last() == state) return
-        undoStack.addLast(state)
-        if (undoStack.size > maxCapacity) {
-            undoStack.removeFirst()
+        if (undoStack.isNotEmpty() && areEquivalent(undoStack.last(), state)) {
+            Log.d("UndoRedo", "push 忽略相同状态(文本+光标): $state")
+            return
         }
+        undoStack.addLast(state)
+        if (undoStack.size > maxCapacity) undoStack.removeFirst()
         redoStack.clear()
     }
 

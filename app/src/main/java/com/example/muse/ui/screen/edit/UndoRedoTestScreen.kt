@@ -16,7 +16,12 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun UndoRedoTestScreen() {
     var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
-    val undoManager = remember { UndoRedoManager<TextFieldValue>(maxCapacity = 20) }
+    val undoManager = remember {
+        UndoRedoManager<TextFieldValue>(maxCapacity = 100) { a, b ->
+            a.text == b.text && a.selection == b.selection
+        }
+    }
+    var isUndoRedoing by remember { mutableStateOf(false) }
 
 
 
@@ -52,11 +57,19 @@ fun UndoRedoTestScreen() {
         BasicTextField(
             value = textFieldValue,
             onValueChange = { newValue ->
-                Log.d("UndoTest", "onValueChange: 新文本='${newValue.text}'")
+                // 只有文本或光标真正变化时才记录撤销
+                val actualChange = newValue.text != textFieldValue.text ||
+                        newValue.selection != textFieldValue.selection
 
-                undoManager.push(textFieldValue)
+                if (actualChange && !isUndoRedoing) {
+                    Log.d("UndoTest", "记录旧值: '${textFieldValue.text}'")
+                    undoManager.push(textFieldValue)
+                } else {
+                    Log.d("UndoTest", "跳过记录 (文本/光标未变或正在撤销/重做)")
+                }
+
                 textFieldValue = newValue
-                Log.d("UndoTest", "push 后 | Undo栈=${undoManager.undoStackSize}, Redo栈=${undoManager.redoStackSize}")
+                Log.d("UndoTest", "更新后 | Undo栈=${undoManager.undoStackSize}, Redo栈=${undoManager.redoStackSize}")
             },
             textStyle = TextStyle(
                 color = Color.Black,
