@@ -21,20 +21,58 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.muse.R
+import com.example.muse.ui.screen.edit.component.GutterItem
 import com.example.muse.ui.screen.edit.component.RadialMenu
 import com.example.muse.ui.screen.edit.component.RadialMenuItem
 import com.example.muse.ui.theme.MuseTheme
+
+private data class EditorConfig(
+    val title: String,
+    val gutterProvider: (Int) -> GutterItem,
+    val textStyle: TextStyle,
+)
+
+private val listConfig = EditorConfig(
+    title = "列表",
+    gutterProvider = { GutterItem.Bullet },
+    textStyle = TextStyle(
+        color = Color.White,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.SemiBold
+    )
+)
+
+private val codeConfig = EditorConfig(
+    title = "代码块",
+    gutterProvider = { GutterItem.Number(it + 1) },
+    textStyle = TextStyle(
+        color = Color.White,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Normal
+    )
+)
+
+private val quoteConfig = EditorConfig(
+    title = "引用",
+    gutterProvider = { GutterItem.QuoteLine },
+    textStyle = TextStyle(
+        color = Color.White,
+        fontSize = 24.sp,
+        fontWeight = FontWeight.SemiBold
+    )
+)
 
 @Composable
 fun EditScreen(
@@ -42,12 +80,25 @@ fun EditScreen(
     onSaveClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFF1E1E1E))
-            .windowInsetsPadding(WindowInsets.systemBars)
-    ) {
+    var editingConfig by remember { mutableStateOf<EditorConfig?>(null) }
+
+    if (editingConfig != null) {
+        val config = editingConfig!!
+        GeneralEditScreen(
+            title = config.title,
+            onBackClick = { editingConfig = null },
+            onDoneClick = { editingConfig = null },
+            gutterProvider = config.gutterProvider,
+            textStyle = config.textStyle,
+            modifier = modifier,
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color(0xFF1E1E1E))
+                .windowInsetsPadding(WindowInsets.systemBars)
+        ) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
@@ -158,14 +209,15 @@ fun EditScreen(
                 }
             },
             items = listOf(
-                RadialMenuItem("列表", R.drawable.ic_list) { /* TODO: 添加列表模块 */ },
+                RadialMenuItem("列表", R.drawable.ic_list) { editingConfig = listConfig },
                 RadialMenuItem("图片", R.drawable.ic_image) { /* TODO: 添加图片模块 */ },
-                RadialMenuItem("代码块", R.drawable.ic_code) { /* TODO: 添加代码块模块 */ },
-                RadialMenuItem("引用", R.drawable.ic_quote) { /* TODO: 添加引用模块 */ },
+                RadialMenuItem("代码块", R.drawable.ic_code) { editingConfig = codeConfig },
+                RadialMenuItem("引用", R.drawable.ic_quote) { editingConfig = quoteConfig },
                 RadialMenuItem("表格", R.drawable.ic_table) { /* TODO: 添加表格模块 */ },
                 RadialMenuItem("子标题", R.drawable.ic_subheading) { /* TODO: 添加子标题模块 */ },
             )
         )
+        }
     }
 }
 
