@@ -32,6 +32,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.muse.R
+import com.example.muse.ui.screen.edit.component.RadialMenu
+import com.example.muse.ui.screen.edit.component.RadialMenuItem
 import com.example.muse.ui.theme.MuseTheme
 
 @Composable
@@ -133,25 +135,37 @@ fun EditScreen(
             }
         }
 
-        // Module menu button (floating)
-        val moduleMenuShape = RoundedCornerShape(100.dp)
-        Box(
+        // 径向菜单 — 按下滑动选择模块类型
+        RadialMenu(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 37.dp, bottom = 94.dp)
-                .size(48.dp)
-                .clip(moduleMenuShape)
-                .border(4.dp, Color.White, moduleMenuShape)
-                .padding(6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_add),
-                contentDescription = "Module menu",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                .padding(end = 94.dp, bottom = 152.dp),
+            centerButton = {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(100.dp))
+                        .border(4.dp, Color.White, RoundedCornerShape(100.dp))
+                        .padding(6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_add),
+                        contentDescription = "Add module",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            },
+            items = listOf(
+                RadialMenuItem("列表", R.drawable.ic_list) { /* TODO: 添加列表模块 */ },
+                RadialMenuItem("图片", R.drawable.ic_image) { /* TODO: 添加图片模块 */ },
+                RadialMenuItem("代码块", R.drawable.ic_code) { /* TODO: 添加代码块模块 */ },
+                RadialMenuItem("引用", R.drawable.ic_quote) { /* TODO: 添加引用模块 */ },
+                RadialMenuItem("表格", R.drawable.ic_table) { /* TODO: 添加表格模块 */ },
+                RadialMenuItem("子标题", R.drawable.ic_subheading) { /* TODO: 添加子标题模块 */ },
             )
-        }
+        )
     }
 }
 

@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MuseTheme(darkTheme = true) {
-                RadialMenuTestScreen()
+                EditScreen()
             }
         }
     }
