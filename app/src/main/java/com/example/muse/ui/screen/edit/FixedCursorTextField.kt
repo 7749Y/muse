@@ -2,6 +2,11 @@ package com.example.muse.ui.screen.edit
 
 import android.view.ViewConfiguration
 import androidx.compose.foundation.layout.Box
+import com.example.muse.ui.screen.edit.core.EditorScrollState
+import com.example.muse.ui.screen.edit.core.EditorViewModel
+import com.example.muse.ui.screen.edit.core.buildAdjustedLines
+import com.example.muse.ui.screen.edit.render.EditorCanvas
+import com.example.muse.ui.screen.edit.render.EditorTouchHandler
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize

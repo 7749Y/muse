@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit
+package com.example.muse.ui.screen.edit.component
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,9 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.withTimeoutOrNull
 
-/**
- * 工具栏按钮，支持普通点击和长按重复触发。
- */
 @Composable
 fun ToolbarButton(
     label: String,

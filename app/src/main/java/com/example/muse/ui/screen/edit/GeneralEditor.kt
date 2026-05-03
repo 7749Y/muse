@@ -3,6 +3,9 @@ package com.example.muse.ui.screen.edit
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import com.example.muse.ui.screen.edit.component.Gutter
+import com.example.muse.ui.screen.edit.component.GutterItem
+import com.example.muse.ui.screen.edit.core.EditorViewModel
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize

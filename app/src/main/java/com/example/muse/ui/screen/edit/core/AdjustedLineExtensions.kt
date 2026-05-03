@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit
+package com.example.muse.ui.screen.edit.core
 
 import androidx.compose.ui.text.TextLayoutResult
 import kotlin.math.max

@@ -3,6 +3,13 @@ package com.example.muse.ui.screen.edit
 import android.content.res.Configuration
 import android.graphics.Rect
 import android.view.ViewTreeObserver
+import com.example.muse.ui.screen.edit.component.GutterItem
+import com.example.muse.ui.screen.edit.component.JoystickButton
+import com.example.muse.ui.screen.edit.component.ToolbarButton
+import com.example.muse.ui.screen.edit.core.EditorViewModel
+import com.example.muse.ui.screen.edit.core.UndoRedoManager
+import com.example.muse.ui.screen.edit.core.moveCursor
+import com.example.muse.ui.screen.edit.core.moveCursorLine
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut

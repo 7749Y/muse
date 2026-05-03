@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit
+package com.example.muse.ui.screen.edit.render
 
 import android.view.ViewConfiguration
 import androidx.compose.foundation.layout.Box
@@ -12,13 +12,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import com.example.muse.ui.screen.edit.core.EditorScrollState
+import com.example.muse.ui.screen.edit.core.EditorViewModel
+import com.example.muse.ui.screen.edit.core.wordBoundaries
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.max
 
-/**
- * 编辑器触摸处理层：单击定位光标、双击选词、三击全选、拖拽滚动 + fling。
- */
 @Composable
 fun EditorTouchHandler(
     scrollState: EditorScrollState,

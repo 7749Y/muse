@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit
+package com.example.muse.ui.screen.edit.core
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.exponentialDecay
@@ -26,7 +26,7 @@ class EditorScrollState(
     private var flingJob: Job? = null
     private val decaySpec = exponentialDecay<Float>()
 
-    /** 启动 fling 减速动画，每帧回调 onFrame 用于同步外部状态 */
+    /** 启动 fling 减速动画 */
     fun startFling(
         velocityPxPerSec: Float,
         minScroll: Float,

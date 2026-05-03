@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit
+package com.example.muse.ui.screen.edit.render
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
@@ -9,10 +9,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.text.drawText
+import com.example.muse.ui.screen.edit.core.AdjustedLine
+import com.example.muse.ui.screen.edit.core.AdjustedLineResolution
+import com.example.muse.ui.screen.edit.core.getParagraphLines
+import com.example.muse.ui.screen.edit.core.resolveAdjustedLine
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -110,7 +114,7 @@ fun EditorCanvas(
             drawText(phLayout, topLeft = Offset(0f, -scrollOffsetPx))
         }
 
-        // IME composition 下划线（使用 layout 的文本长度确保不会越界）
+        // IME composition 下划线
         val composition = value.composition
         val layoutTextLen = r.layoutInput.text.length
         if (composition != null && !composition.collapsed &&
@@ -123,7 +127,7 @@ fun EditorCanvas(
                 if (off >= layoutTextLen) break
                 val line = r.getLineForOffset(off)
                 val lineEnd = minOf(r.getLineEnd(line), compMax)
-                if (lineEnd <= off) break  // 防止死循环
+                if (lineEnd <= off) break
                 if (off < lineEnd) {
                     val startRect = r.getBoundingBox(off)
                     val endRect = r.getBoundingBox(lineEnd - 1)

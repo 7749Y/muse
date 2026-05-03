@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit
+package com.example.muse.ui.screen.edit.component
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
@@ -13,10 +13,6 @@ import androidx.compose.ui.unit.dp
 
 /**
  * 摇杆组件：圆形底板 + 可拖动的滑块，通过回调输出归一化方向向量（-1..1）。
- *
- * @param onJoystickMove 拖拽中持续回调 (dx, dy)，松手时回调 (0f, 0f)
- * @param baseRadius 底板半径
- * @param thumbRadius 滑块半径
  */
 @Composable
 fun JoystickButton(
@@ -78,9 +74,7 @@ fun JoystickButton(
                 }
             }
     ) {
-        // 底板
         drawCircle(color = baseColor, radius = baseRadiusPx)
-        // 滑块
         drawCircle(
             color = thumbColor,
             radius = thumbRadiusPx,
