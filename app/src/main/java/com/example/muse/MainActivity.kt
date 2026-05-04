@@ -21,7 +21,7 @@ import com.example.muse.ui.screen.edit.component.ModuleType
 import com.example.muse.ui.screen.edit.component.RadialMenuTestScreen
 import com.example.muse.ui.screen.home.HomeScreen
 import com.example.muse.ui.theme.MuseTheme
-
+//休假
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
