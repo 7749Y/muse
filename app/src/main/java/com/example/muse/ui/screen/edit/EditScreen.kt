@@ -3,6 +3,9 @@ package com.example.muse.ui.screen.edit
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -28,6 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -35,18 +42,24 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.geometry.Offset
 import com.example.muse.R
 import com.example.muse.ui.screen.edit.component.GeneralText
 import com.example.muse.ui.screen.edit.component.GutterItem
+import com.example.muse.ui.screen.edit.component.HashKey
+import com.example.muse.ui.screen.edit.component.HeadlineEditor
 import com.example.muse.ui.screen.edit.component.ModuleType
 import com.example.muse.ui.screen.edit.component.RadialMenu
 import com.example.muse.ui.screen.edit.component.RadialMenuItem
+import com.example.muse.ui.screen.edit.component.headingFontSize
 import com.example.muse.ui.theme.MuseTheme
+import androidx.compose.runtime.remember
 
 data class SavedModule(
     val text: String,
     val type: ModuleType,
     val paragraphSpacingPx: Float = 0f,
+    val headingLevel: Int = 2,
 )
 
 private data class EditorConfig(
@@ -100,8 +113,23 @@ fun EditScreen(
     moduleSpacing: Dp = 0.dp,
     initialModules: List<SavedModule> = emptyList(),
 ) {
+    val focusManager = LocalFocusManager.current
     var editingConfig by remember { mutableStateOf<EditorConfig?>(null) }
     var modules by remember { mutableStateOf(initialModules) }
+    var titleText by remember { mutableStateOf("") }
+    var editingSubHeadingIndex by remember { mutableStateOf<Int?>(null) }
+    var isEditingTitle by remember { mutableStateOf(false) }
+
+    val scrollFocusConnection = remember(focusManager) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source == NestedScrollSource.UserInput) {
+                    focusManager.clearFocus()
+                }
+                return Offset.Zero
+            }
+        }
+    }
 
     if (editingConfig != null) {
         val config = editingConfig!!
@@ -123,6 +151,12 @@ fun EditScreen(
                 .fillMaxSize()
                 .background(Color(0xFF1E1E1E))
                 .windowInsetsPadding(WindowInsets.systemBars)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    focusManager.clearFocus()
+                }
         ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -168,17 +202,29 @@ fun EditScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Title input
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
+                // 主标题 — 双击编辑，h1 固定
+                if (isEditingTitle) {
+                    HeadlineEditor(
+                        text = titleText,
+                        onTextChange = { titleText = it },
+                        level = 1,
+                        showDrum = false,
+                        modifier = Modifier.weight(1f),
+                        placeholder = "标题",
+                        onFocusLost = { isEditingTitle = false },
+                    )
+                } else {
                     Text(
-                        text = "标题",
-                        fontSize = 16.sp,
-                        color = Color.White.copy(alpha = 0.4f)
+                        text = titleText.ifEmpty { "标题" },
+                        fontSize = headingFontSize(1),
+                        fontWeight = FontWeight.Bold,
+                        color = if (titleText.isEmpty()) Color.White.copy(alpha = 0.4f) else Color.White,
+                        modifier = Modifier
+                            .weight(1f)
+                            .combinedClickable(
+                                onClick = { focusManager.clearFocus() },
+                                onDoubleClick = { isEditingTitle = true },
+                            ),
                     )
                 }
 
@@ -188,7 +234,11 @@ fun EditScreen(
                         .width(72.dp)
                         .height(40.dp)
                         .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp))
-                        .padding(8.dp),
+                        .padding(8.dp)
+                        .combinedClickable(
+                            onClick = { focusManager.clearFocus() },
+                            onDoubleClick = null,
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(
@@ -215,18 +265,86 @@ fun EditScreen(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
+                    .nestedScroll(scrollFocusConnection)
             ) {
                 modules.forEachIndexed { index, module ->
-                    GeneralText(
-                        text = module.text,
-                        type = module.type,
-                        paragraphSpacingPx = module.paragraphSpacingPx,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 5.dp),
-                    )
+                    if (module.type == ModuleType.SubHeading) {
+                        if (editingSubHeadingIndex == index) {
+                            HeadlineEditor(
+                                text = module.text,
+                                onTextChange = { newText ->
+                                    modules = modules.toMutableList().apply {
+                                        val current = get(index)
+                                        val hashResult = HashKey.detectLevel(newText)
+                                        val newLevel = hashResult?.first ?: current.headingLevel
+                                        set(index, current.copy(
+                                            text = newText,
+                                            headingLevel = newLevel,
+                                        ))
+                                    }
+                                },
+                                level = module.headingLevel,
+                                onLevelChange = { newLevel ->
+                                    modules = modules.toMutableList().apply {
+                                        set(index, get(index).copy(headingLevel = newLevel))
+                                    }
+                                },
+                                showDrum = true,
+                                onFocusLost = { finalText ->
+                                    editingSubHeadingIndex = null
+                                    if (finalText.isBlank()) {
+                                        modules = modules.toMutableList().apply { removeAt(index) }
+                                    }
+                                },
+                                placeholder = "输入子标题...",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 5.dp),
+                            )
+                        } else {
+                            Text(
+                                text = module.text,
+                                fontSize = headingFontSize(module.headingLevel),
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 5.dp)
+                                    .combinedClickable(
+                                        onClick = { focusManager.clearFocus() },
+                                        onDoubleClick = { editingSubHeadingIndex = index },
+                                    ),
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .combinedClickable(
+                                    onClick = { focusManager.clearFocus() },
+                                    onDoubleClick = null,
+                                )
+                        ) {
+                            GeneralText(
+                                text = module.text,
+                                type = module.type,
+                                paragraphSpacingPx = module.paragraphSpacingPx,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 5.dp),
+                            )
+                        }
+                    }
                     if (index < modules.size - 1) {
-                        Spacer(modifier = Modifier.height(moduleSpacing))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(moduleSpacing)
+                                .combinedClickable(
+                                    onClick = { focusManager.clearFocus() },
+                                    onDoubleClick = null,
+                                )
+                        )
                     }
                 }
             }
@@ -259,7 +377,11 @@ fun EditScreen(
                 RadialMenuItem("引用", R.drawable.ic_quote) { editingConfig = quoteConfig },
                 RadialMenuItem("图片", R.drawable.ic_image) { /* TODO: 添加图片模块 */ },
                 RadialMenuItem("表格", R.drawable.ic_table) { /* TODO: 添加表格模块 */ },
-                RadialMenuItem("子标题", R.drawable.ic_subheading) { /* TODO: 添加子标题模块 */ },
+                RadialMenuItem("子标题", R.drawable.ic_subheading) {
+                    val idx = modules.size
+                    modules = modules + SavedModule("", ModuleType.SubHeading, headingLevel = 2)
+                    editingSubHeadingIndex = idx
+                },
                 RadialMenuItem("代码块", R.drawable.ic_code) { editingConfig = codeConfig },
             )
         )
@@ -279,7 +401,7 @@ private fun EditScreenPreview() {
             moduleSpacing = 8.dp,
             initialModules = listOf(
                 SavedModule("购物清单\n牛奶\n鸡蛋\n面包", ModuleType.List, 50f),
-                SavedModule("子标题示例", ModuleType.SubHeading, 50f),
+                SavedModule("子标题示例", ModuleType.SubHeading, 0f, headingLevel = 2),
                 SavedModule("子曰：学而时习之，不亦说乎。有朋自远方来，不亦乐乎。", ModuleType.Quote, 20f),
                 SavedModule("""fun main() {
     println("Hello, World!")
