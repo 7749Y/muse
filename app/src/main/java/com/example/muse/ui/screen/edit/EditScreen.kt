@@ -287,6 +287,7 @@ fun EditScreen(
                                 },
                                 showDrum = true,
                                 onFocusLost = { finalText ->
+                                    if (editingSubHeadingIndex != index) return@HeadlineEditor
                                     editingSubHeadingIndex = null
                                     if (finalText.isBlank()) {
                                         modules = modules.toMutableList().apply { removeAt(index) }
