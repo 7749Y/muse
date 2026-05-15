@@ -4,6 +4,8 @@ import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -207,18 +209,24 @@ fun EditScreen(
                 }
             }
 
-            // 已保存的模块列表
-            modules.forEachIndexed { index, module ->
-                GeneralText(
-                    text = module.text,
-                    type = module.type,
-                    paragraphSpacingPx = module.paragraphSpacingPx,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 37.dp),
-                )
-                if (index < modules.size - 1) {
-                    Spacer(modifier = Modifier.height(moduleSpacing))
+            // 可滚动的已保存模块列表
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                modules.forEachIndexed { index, module ->
+                    GeneralText(
+                        text = module.text,
+                        type = module.type,
+                        paragraphSpacingPx = module.paragraphSpacingPx,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 37.dp),
+                    )
+                    if (index < modules.size - 1) {
+                        Spacer(modifier = Modifier.height(moduleSpacing))
+                    }
                 }
             }
         }
