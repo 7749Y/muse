@@ -30,19 +30,29 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.muse.R
+import com.example.muse.ui.screen.edit.component.GeneralText
 import com.example.muse.ui.screen.edit.component.GutterItem
+import com.example.muse.ui.screen.edit.component.ModuleType
 import com.example.muse.ui.screen.edit.component.RadialMenu
 import com.example.muse.ui.screen.edit.component.RadialMenuItem
 import com.example.muse.ui.theme.MuseTheme
+
+private data class SavedModule(
+    val text: String,
+    val type: ModuleType,
+    val paragraphSpacingPx: Float = 0f,
+)
 
 private data class EditorConfig(
     val title: String,
     val gutterProvider: (Int) -> GutterItem,
     val textStyle: TextStyle,
     val paragraphSpacingPx: Float = 50f,
+    val type: ModuleType,
 )
 
 private val listConfig = EditorConfig(
@@ -52,7 +62,8 @@ private val listConfig = EditorConfig(
         color = Color.White,
         fontSize = 20.sp,
         fontWeight = FontWeight.SemiBold
-    )
+    ),
+    type = ModuleType.List,
 )
 
 private val codeConfig = EditorConfig(
@@ -64,6 +75,7 @@ private val codeConfig = EditorConfig(
         fontWeight = FontWeight.Normal
     ),
     paragraphSpacingPx = 0f,
+    type = ModuleType.Code,
 )
 
 private val quoteConfig = EditorConfig(
@@ -75,22 +87,28 @@ private val quoteConfig = EditorConfig(
         fontWeight = FontWeight.SemiBold
     ),
     paragraphSpacingPx = 20f,
+    type = ModuleType.Quote,
 )
 
 @Composable
 fun EditScreen(
     onBackClick: () -> Unit = {},
     onSaveClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    moduleSpacing: Dp = 0.dp,
 ) {
     var editingConfig by remember { mutableStateOf<EditorConfig?>(null) }
+    var modules by remember { mutableStateOf(listOf<SavedModule>()) }
 
     if (editingConfig != null) {
         val config = editingConfig!!
         GeneralEditScreen(
             title = config.title,
             onBackClick = { editingConfig = null },
-            onDoneClick = { editingConfig = null },
+            onDoneClick = { text ->
+                modules = modules + SavedModule(text, config.type, config.paragraphSpacingPx)
+                editingConfig = null
+            },
             gutterProvider = config.gutterProvider,
             textStyle = config.textStyle,
             paragraphSpacingPx = config.paragraphSpacingPx,
@@ -186,6 +204,21 @@ fun EditScreen(
                             color = Color(0xFFB3B3B3)
                         )
                     }
+                }
+            }
+
+            // 已保存的模块列表
+            modules.forEachIndexed { index, module ->
+                GeneralText(
+                    text = module.text,
+                    type = module.type,
+                    paragraphSpacingPx = module.paragraphSpacingPx,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 37.dp),
+                )
+                if (index < modules.size - 1) {
+                    Spacer(modifier = Modifier.height(moduleSpacing))
                 }
             }
         }

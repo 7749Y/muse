@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -65,7 +66,7 @@ fun GeneralText(
         else
             with(density) { type.fontSize.toPx() * 1.4f }
 
-        Row {
+        Row(modifier = Modifier.height(with(density) { totalTextHeight.toDp() })) {
             Gutter(
                 itemProvider = type.gutterProvider,
                 totalLines = layoutResult.lineCount,

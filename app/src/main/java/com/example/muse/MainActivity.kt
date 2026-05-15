@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.unit.dp
 import com.example.muse.ui.screen.browse.BrowseScreen
 import com.example.muse.ui.screen.edit.EditScreen
 import com.example.muse.ui.screen.edit.GeneralEditScreen
@@ -28,18 +29,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MuseTheme(darkTheme = true) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFF1E1E1E))
-                        .windowInsetsPadding(WindowInsets.systemBars)
-                ) {
-                    GeneralText(
-                        text = "这是一串文本啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊\n再来一串\n再来一串\n再来一串\n再来一串\n再来一串",
-                        type = ModuleType.List,
-                        paragraphSpacingPx = 50f
-                    )
-                }
+                EditScreen(
+                    moduleSpacing = 100.dp
+                )
             }
         }
     }

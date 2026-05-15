@@ -65,7 +65,7 @@ import kotlin.math.abs
 fun GeneralEditScreen(
     title: String = "标题",
     onBackClick: () -> Unit = {},
-    onDoneClick: () -> Unit = {},
+    onDoneClick: (text: String) -> Unit = {},
     modifier: Modifier = Modifier,
     gutterProvider: (lineIndex: Int) -> GutterItem = { GutterItem.Number(it + 1) },
     textStyle: TextStyle = TextStyle(
@@ -201,7 +201,7 @@ fun GeneralEditScreen(
                     exit = fadeOut()
                 ) {
                     IconButton(
-                        onClick = onDoneClick,
+                        onClick = { onDoneClick(tfValue.text) },
                         modifier = Modifier.size(44.dp)
                     ) {
                         Icon(
