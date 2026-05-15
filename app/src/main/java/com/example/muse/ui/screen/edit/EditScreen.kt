@@ -43,7 +43,7 @@ import com.example.muse.ui.screen.edit.component.RadialMenu
 import com.example.muse.ui.screen.edit.component.RadialMenuItem
 import com.example.muse.ui.theme.MuseTheme
 
-private data class SavedModule(
+data class SavedModule(
     val text: String,
     val type: ModuleType,
     val paragraphSpacingPx: Float = 0f,
@@ -98,9 +98,10 @@ fun EditScreen(
     onSaveClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     moduleSpacing: Dp = 0.dp,
+    initialModules: List<SavedModule> = emptyList(),
 ) {
     var editingConfig by remember { mutableStateOf<EditorConfig?>(null) }
-    var modules by remember { mutableStateOf(listOf<SavedModule>()) }
+    var modules by remember { mutableStateOf(initialModules) }
 
     if (editingConfig != null) {
         val config = editingConfig!!
@@ -163,7 +164,7 @@ fun EditScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 37.dp, vertical = 22.dp),
+                    .padding(horizontal = 37.dp, vertical = 11.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -222,7 +223,7 @@ fun EditScreen(
                         paragraphSpacingPx = module.paragraphSpacingPx,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 37.dp),
+                            .padding(horizontal = 5.dp),
                     )
                     if (index < modules.size - 1) {
                         Spacer(modifier = Modifier.height(moduleSpacing))
@@ -274,6 +275,18 @@ fun EditScreen(
 @Composable
 private fun EditScreenPreview() {
     MuseTheme(darkTheme = true) {
-        EditScreen()
+        EditScreen(
+            moduleSpacing = 8.dp,
+            initialModules = listOf(
+                SavedModule("购物清单\n牛奶\n鸡蛋\n面包", ModuleType.List, 50f),
+                SavedModule("子标题示例", ModuleType.SubHeading, 50f),
+                SavedModule("子曰：学而时习之，不亦说乎。有朋自远方来，不亦乐乎。", ModuleType.Quote, 20f),
+                SavedModule("""fun main() {
+    println("Hello, World!")
+    val x = 42
+    return x
+}""", ModuleType.Code, 0f),
+            )
+        )
     }
 }
