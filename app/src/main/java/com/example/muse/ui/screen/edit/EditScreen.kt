@@ -222,7 +222,7 @@ fun EditScreen(
                         modifier = Modifier
                             .weight(1f)
                             .combinedClickable(
-                                onClick = { focusManager.clearFocus() },
+                                onClick = {},
                                 onDoubleClick = { isEditingTitle = true },
                             ),
                     )
@@ -234,11 +234,7 @@ fun EditScreen(
                         .width(72.dp)
                         .height(40.dp)
                         .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp))
-                        .padding(8.dp)
-                        .combinedClickable(
-                            onClick = { focusManager.clearFocus() },
-                            onDoubleClick = null,
-                        ),
+                        .padding(8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(
@@ -311,40 +307,23 @@ fun EditScreen(
                                     .fillMaxWidth()
                                     .padding(horizontal = 5.dp)
                                     .combinedClickable(
-                                        onClick = { focusManager.clearFocus() },
+                                        onClick = {},
                                         onDoubleClick = { editingSubHeadingIndex = index },
                                     ),
                             )
                         }
                     } else {
-                        Box(
+                        GeneralText(
+                            text = module.text,
+                            type = module.type,
+                            paragraphSpacingPx = module.paragraphSpacingPx,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .combinedClickable(
-                                    onClick = { focusManager.clearFocus() },
-                                    onDoubleClick = null,
-                                )
-                        ) {
-                            GeneralText(
-                                text = module.text,
-                                type = module.type,
-                                paragraphSpacingPx = module.paragraphSpacingPx,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 5.dp),
-                            )
-                        }
+                                .padding(horizontal = 5.dp),
+                        )
                     }
                     if (index < modules.size - 1) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(moduleSpacing)
-                                .combinedClickable(
-                                    onClick = { focusManager.clearFocus() },
-                                    onDoubleClick = null,
-                                )
-                        )
+                        Spacer(modifier = Modifier.height(moduleSpacing))
                     }
                 }
             }
