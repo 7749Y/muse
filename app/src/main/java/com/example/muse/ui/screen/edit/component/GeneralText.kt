@@ -40,7 +40,7 @@ fun GeneralText(
     )
 
     BoxWithConstraints(modifier = modifier) {
-        val gutterWidthDp = 24.dp
+        val gutterWidthDp = 30.dp
         val textAreaWidthPx = with(density) {
             (maxWidth - gutterWidthDp).coerceAtLeast(0.dp).toPx().roundToInt()
         }
@@ -54,11 +54,10 @@ fun GeneralText(
         }
 
         val adjustedLines = remember(layoutResult, paragraphSpacingPx) {
-            if (paragraphSpacingPx > 0f) layoutResult.buildAdjustedLines(paragraphSpacingPx)
-            else null
+            layoutResult.buildAdjustedLines(paragraphSpacingPx)
         }
 
-        val totalTextHeight = adjustedLines?.lastOrNull()?.bottom
+        val totalTextHeight = adjustedLines.lastOrNull()?.bottom
             ?: layoutResult.size.height.toFloat()
 
         val lineHeightPx = if (layoutResult.lineCount > 0)
@@ -79,7 +78,7 @@ fun GeneralText(
                 centerContent = true,
                 textLayoutResult = layoutResult,
                 useLogicalLines = true,
-                adjustedLines = adjustedLines ?: emptyList(),
+                adjustedLines = adjustedLines,
             )
 
             Canvas(
@@ -87,7 +86,6 @@ fun GeneralText(
                     .weight(1f)
                     .fillMaxHeight()
             ) {
-                if (adjustedLines != null) {
                     for (adj in adjustedLines) {
                         val lineIndex = adj.originalLineIndex
                         if (lineIndex !in 0 until layoutResult.lineCount) continue
@@ -110,9 +108,6 @@ fun GeneralText(
                             )
                         )
                     }
-                } else {
-                    drawText(layoutResult, topLeft = Offset.Zero)
-                }
             }
         }
     }
