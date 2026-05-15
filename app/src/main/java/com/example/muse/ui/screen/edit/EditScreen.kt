@@ -7,7 +7,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -131,6 +133,25 @@ fun EditScreen(
         }
     }
 
+    fun commitSubHeading(index: Int) {
+        modules = modules.toMutableList().apply {
+            val mod = modules[index]
+            val hashResult = HashKey.detectLevel(mod.text)
+            val (newLevel, cleanText) = if (hashResult != null) {
+                hashResult.first to hashResult.second
+            } else {
+                mod.headingLevel to mod.text   // 无前缀则保持原等级和文本
+            }
+
+            if (cleanText.isBlank()) {
+                // 空内容 → 删除该子标题
+                removeAt(index)
+            } else {
+                set(index, mod.copy(text = cleanText, headingLevel = newLevel))
+            }
+        }
+    }
+
     if (editingConfig != null) {
         val config = editingConfig!!
         GeneralEditScreen(
@@ -159,7 +180,9 @@ fun EditScreen(
                 }
         ) {
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
         ) {
             // Navigation bar
             Row(
@@ -209,7 +232,9 @@ fun EditScreen(
                         onTextChange = { titleText = it },
                         level = 1,
                         showDrum = false,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp),
                         placeholder = "标题",
                         onFocusLost = { isEditingTitle = false },
                     )
@@ -299,11 +324,9 @@ fun EditScreen(
                                     .padding(horizontal = 5.dp),
                             )
                         } else {
-                            Text(
+                            GeneralText(
                                 text = module.text,
-                                fontSize = headingFontSize(module.headingLevel),
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                type = ModuleType.SubHeading,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 5.dp)
@@ -358,6 +381,13 @@ fun EditScreen(
                 RadialMenuItem("图片", R.drawable.ic_image) { /* TODO: 添加图片模块 */ },
                 RadialMenuItem("表格", R.drawable.ic_table) { /* TODO: 添加表格模块 */ },
                 RadialMenuItem("子标题", R.drawable.ic_subheading) {
+                    // 1. 先保存并删除空内容（若文本为空）
+                    editingSubHeadingIndex?.let { commitSubHeading(it) }
+
+                    // 2. 临时清空编辑状态，防止旧编辑器的 onFocusLost 干扰
+                    editingSubHeadingIndex = null
+
+                    // 3. 添加新子标题并进入编辑
                     val idx = modules.size
                     modules = modules + SavedModule("", ModuleType.SubHeading, headingLevel = 2)
                     editingSubHeadingIndex = idx

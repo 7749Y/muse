@@ -1,12 +1,9 @@
 package com.example.muse.ui.screen.edit.component
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,17 +14,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.muse.ui.screen.edit.FixedCursorTextField
 
 /** 根据标题等级返回对应字体大小 */
 fun headingFontSize(level: Int): TextUnit = when (level) {
@@ -63,7 +58,8 @@ fun HeadlineEditor(
     placeholder: String = "",
 ) {
     val focusManager = LocalFocusManager.current
-    var textState by remember(text) { mutableStateOf(text) }
+    // 不把 text 加入 keys —— 编辑期间外部 text 不会变化，避免重建 TextFieldValue 导致光标跳回开头
+    var tfValue by remember { mutableStateOf(TextFieldValue(text)) }
     var everFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
@@ -83,56 +79,44 @@ fun HeadlineEditor(
             Spacer(modifier = Modifier.width(10.dp))
         }
 
-        BasicTextField(
-            value = textState,
-            onValueChange = { newText ->
-                val hashResult = HashKey.detectLevel(newText)
+        FixedCursorTextField(
+            value = tfValue,
+            onValueChange = { newValue ->
+                tfValue = newValue
+                val hashResult = HashKey.detectLevel(newValue.text)
                 if (hashResult != null) {
                     val (newLevel, _) = hashResult
                     onLevelChange(newLevel)
                 }
-                textState = newText
-                onTextChange(newText)
+                onTextChange(newValue.text)
             },
-            modifier = Modifier
-                .weight(1f)
-                .focusRequester(focusRequester)
-                .onFocusChanged { focusState ->
-                    if (focusState.isFocused) {
-                        everFocused = true
-                    } else if (everFocused) {
-                        val hashResult = HashKey.detectLevel(textState)
-                        val finalText = if (hashResult != null) {
-                            val (_, clean) = hashResult
-                            textState = clean
-                            onTextChange(clean)
-                            clean
-                        } else {
-                            textState
-                        }
-                        onFocusLost(finalText)
-                    }
-                },
+            modifier = Modifier.weight(1f),
+            focusRequester = focusRequester,
             textStyle = TextStyle(
                 color = Color.White,
                 fontSize = headingFontSize(level),
                 fontWeight = FontWeight.Bold,
             ),
-            cursorBrush = SolidColor(Color.White),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            placeholderText = placeholder,
+            singleLine = true,
+            enableScroll = false,
             keyboardActions = KeyboardActions(
                 onDone = { focusManager.clearFocus() }
             ),
-            decorationBox = { innerTextField ->
-                Box {
-                    if (textState.isEmpty()) {
-                        Text(
-                            text = placeholder,
-                            color = Color.White.copy(alpha = 0.4f),
-                            fontSize = headingFontSize(level),
-                        )
+            onFocusChanged = { focused ->
+                if (focused) {
+                    everFocused = true
+                } else if (everFocused) {
+                    val hashResult = HashKey.detectLevel(tfValue.text)
+                    val finalText = if (hashResult != null) {
+                        val (_, clean) = hashResult
+                        tfValue = tfValue.copy(text = clean)
+                        onTextChange(clean)
+                        clean
+                    } else {
+                        tfValue.text
                     }
-                    innerTextField()
+                    onFocusLost(finalText)
                 }
             },
         )

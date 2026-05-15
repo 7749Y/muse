@@ -43,6 +43,10 @@ fun FixedCursorTextField(
     placeholderText: String? = null,
     editorViewModel: EditorViewModel? = null,
     paragraphSpacingPx: Float = 0f,
+    singleLine: Boolean = false,
+    enableScroll: Boolean = true,
+    keyboardActions: androidx.compose.foundation.text.KeyboardActions = androidx.compose.foundation.text.KeyboardActions.Default,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val isImeVisible = WindowInsets.isImeVisible
     val scope = rememberCoroutineScope()
@@ -68,23 +72,28 @@ fun FixedCursorTextField(
         textStyle.copy(lineHeight = textStyle.fontSize * 1.4f)
     }
 
-    // 计算底部留白（用于”滚动超出最后一行”效果）
-    // 当有有效文本布局时根据行高计算，否则使用默认值
-    val bottomPaddingPx = remember(lineHeightPx, containerHeightPx) {
-        if (lineHeightPx > 0f && containerHeightPx > 0f) {
-            (containerHeightPx - lineHeightPx).coerceAtLeast(0f) // 至少一行高，留出整个视口
-        } else {
-            containerHeightPx // 未就绪时取视口高度（保守值）
+    val topPaddingPx: Float
+    val bottomPaddingPx: Float
+    if (enableScroll) {
+        // 计算底部留白（用于”滚动超出最后一行”效果）
+        bottomPaddingPx = remember(lineHeightPx, containerHeightPx) {
+            if (lineHeightPx > 0f && containerHeightPx > 0f) {
+                (containerHeightPx - lineHeightPx).coerceAtLeast(0f)
+            } else {
+                containerHeightPx
+            }
         }
-    }
-
-    // 顶部留白（与底部留白对称）
-    val topPaddingPx = remember(lineHeightPx, containerHeightPx) {
-        if (lineHeightPx > 0f && containerHeightPx > 0f) {
-            (containerHeightPx - lineHeightPx).coerceAtLeast(0f)
-        } else {
-            containerHeightPx
+        // 顶部留白（与底部留白对称）
+        topPaddingPx = remember(lineHeightPx, containerHeightPx) {
+            if (lineHeightPx > 0f && containerHeightPx > 0f) {
+                (containerHeightPx - lineHeightPx).coerceAtLeast(0f)
+            } else {
+                containerHeightPx
+            }
         }
+    } else {
+        topPaddingPx = 0f
+        bottomPaddingPx = 0f
     }
 
     // 同步调整后的行位置到 ViewModel
@@ -118,71 +127,71 @@ fun FixedCursorTextField(
     LaunchedEffect(isFocused) {
         cursorVisible = isFocused
     }
-    // 将 topPaddingPx 加入依赖，自动居中逻辑也会适配新的上下留白
-    LaunchedEffect(
-        textLayoutResult,
-        value.selection,
-        isDragging,
-        isImeVisible,
-        containerHeightPx,
-        topPaddingPx,
-        bottomPaddingPx,
-        adjustedLines,
-    ) {
-        if (!isImeVisible || isDragging || textLayoutResult == null || containerHeightPx <= 0f) return@LaunchedEffect
-        val r = textLayoutResult!!
-        val cursorRect = r.getCursorRect(value.selection.start)
-
-        val al1 = adjustedLines
-        val (cursorTop, textHeight) = if (al1 != null) {
-            val cursorLine = r.getLineForOffset(value.selection.start)
-            val adj = al1.getOrNull(cursorLine)
-            if (adj != null) {
-                val adjCursorTop = adj.top + (cursorRect.top - r.getLineTop(cursorLine))
-                adjCursorTop to al1.last().bottom
-            } else {
-                cursorRect.top to al1.last().bottom
-            }
-        } else {
-            cursorRect.top to r.size.height.toFloat()
-        }
-
-        val targetScroll = cursorTop - containerHeightPx / 2f + cursorRect.height / 2f
-
-        // 允许滚动范围涵盖从「只显示顶部留白」到「只显示底部留白」的所有位置
-        val minScroll = minOf(-topPaddingPx, textHeight + bottomPaddingPx - containerHeightPx)
-        val maxScroll = maxOf(-topPaddingPx, textHeight + bottomPaddingPx - containerHeightPx)
-
-        scrollOffsetPx = targetScroll.coerceIn(minScroll, maxScroll)
-        editorViewModel?.updateScroll(scrollOffsetPx)
-    }
-
-    LaunchedEffect(isImeVisible, adjustedLines) {
-        if (isImeVisible && !isDragging) {
-            // 手动触发一次居中（复用原有居中逻辑）
-            val r = textLayoutResult ?: return@LaunchedEffect
+    if (enableScroll) {
+        // 将 topPaddingPx 加入依赖，自动居中逻辑也会适配新的上下留白
+        LaunchedEffect(
+            textLayoutResult,
+            value.selection,
+            isDragging,
+            isImeVisible,
+            containerHeightPx,
+            topPaddingPx,
+            bottomPaddingPx,
+            adjustedLines,
+        ) {
+            if (!isImeVisible || isDragging || textLayoutResult == null || containerHeightPx <= 0f) return@LaunchedEffect
+            val r = textLayoutResult!!
             val cursorRect = r.getCursorRect(value.selection.start)
 
-            val al2 = adjustedLines
-            val (cursorTop, textHeight) = if (al2 != null) {
+            val al1 = adjustedLines
+            val (cursorTop, textHeight) = if (al1 != null) {
                 val cursorLine = r.getLineForOffset(value.selection.start)
-                val adj = al2.getOrNull(cursorLine)
+                val adj = al1.getOrNull(cursorLine)
                 if (adj != null) {
                     val adjCursorTop = adj.top + (cursorRect.top - r.getLineTop(cursorLine))
-                    adjCursorTop to al2.last().bottom
+                    adjCursorTop to al1.last().bottom
                 } else {
-                    cursorRect.top to al2.last().bottom
+                    cursorRect.top to al1.last().bottom
                 }
             } else {
                 cursorRect.top to r.size.height.toFloat()
             }
 
             val targetScroll = cursorTop - containerHeightPx / 2f + cursorRect.height / 2f
-            val totalH = topPaddingPx + textHeight + bottomPaddingPx
-            val minScroll = if (totalH < containerHeightPx) -(containerHeightPx - totalH) / 2f else -topPaddingPx
-            val maxScroll = max(0f, textHeight + bottomPaddingPx - containerHeightPx)
+
+            val minScroll = minOf(-topPaddingPx, textHeight + bottomPaddingPx - containerHeightPx)
+            val maxScroll = maxOf(-topPaddingPx, textHeight + bottomPaddingPx - containerHeightPx)
+
             scrollOffsetPx = targetScroll.coerceIn(minScroll, maxScroll)
             editorViewModel?.updateScroll(scrollOffsetPx)
+        }
+
+        LaunchedEffect(isImeVisible, adjustedLines) {
+            if (isImeVisible && !isDragging) {
+                val r = textLayoutResult ?: return@LaunchedEffect
+                val cursorRect = r.getCursorRect(value.selection.start)
+
+                val al2 = adjustedLines
+                val (cursorTop, textHeight) = if (al2 != null) {
+                    val cursorLine = r.getLineForOffset(value.selection.start)
+                    val adj = al2.getOrNull(cursorLine)
+                    if (adj != null) {
+                        val adjCursorTop = adj.top + (cursorRect.top - r.getLineTop(cursorLine))
+                        adjCursorTop to al2.last().bottom
+                    } else {
+                        cursorRect.top to al2.last().bottom
+                    }
+                } else {
+                    cursorRect.top to r.size.height.toFloat()
+                }
+
+                val targetScroll = cursorTop - containerHeightPx / 2f + cursorRect.height / 2f
+                val totalH = topPaddingPx + textHeight + bottomPaddingPx
+                val minScroll = if (totalH < containerHeightPx) -(containerHeightPx - totalH) / 2f else -topPaddingPx
+                val maxScroll = max(0f, textHeight + bottomPaddingPx - containerHeightPx)
+                scrollOffsetPx = targetScroll.coerceIn(minScroll, maxScroll)
+                editorViewModel?.updateScroll(scrollOffsetPx)
+            }
         }
     }
 
@@ -218,9 +227,14 @@ fun FixedCursorTextField(
                 modifier = Modifier
                     .fillMaxSize()
                     .focusRequester(focusRequester)
-                    .onFocusChanged { isFocused = it.isFocused }
+                    .onFocusChanged {
+                        isFocused = it.isFocused
+                        onFocusChanged?.invoke(it.isFocused)
+                    }
                     .drawWithContent { /* 隐藏绘制 */ },
                 textStyle = effectiveTextStyle,
+                singleLine = singleLine,
+                keyboardActions = keyboardActions,
                 cursorBrush = SolidColor(Color.Transparent),
                 decorationBox = { inner -> inner() }
             )

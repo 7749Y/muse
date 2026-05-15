@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MuseTheme(darkTheme = true) {
                 EditScreen(
-                    moduleSpacing = 100.dp
+                    moduleSpacing = 22.dp,
                 )
             }
         }
