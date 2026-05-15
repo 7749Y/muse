@@ -21,7 +21,7 @@ import com.example.muse.ui.screen.edit.component.ModuleType
 import com.example.muse.ui.screen.edit.component.RadialMenuTestScreen
 import com.example.muse.ui.screen.home.HomeScreen
 import com.example.muse.ui.theme.MuseTheme
-//休假
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +37,7 @@ class MainActivity : ComponentActivity() {
                     GeneralText(
                         text = "这是一串文本啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊\n再来一串\n再来一串\n再来一串\n再来一串\n再来一串",
                         type = ModuleType.List,
+                        paragraphSpacingPx = 50f
                     )
                 }
             }
