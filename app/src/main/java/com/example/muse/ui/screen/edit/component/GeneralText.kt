@@ -15,6 +15,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.example.muse.ui.screen.edit.core.buildAdjustedLines
 import kotlin.math.roundToInt
@@ -29,14 +30,16 @@ fun GeneralText(
     type: ModuleType,
     modifier: Modifier = Modifier,
     paragraphSpacingPx: Float = 0f,
+    fontSize: TextUnit? = null,
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
+    val effectiveFontSize = fontSize ?: type.fontSize
     val textStyle = TextStyle(
         color = type.textColor,
-        fontSize = type.fontSize,
+        fontSize = effectiveFontSize,
         fontWeight = type.fontWeight,
-        lineHeight = type.fontSize * 1.4f
+        lineHeight = effectiveFontSize * 1.4f
     )
 
     BoxWithConstraints(modifier = modifier) {
@@ -63,7 +66,7 @@ fun GeneralText(
         val lineHeightPx = if (layoutResult.lineCount > 0)
             (layoutResult.getLineBottom(0) - layoutResult.getLineTop(0))
         else
-            with(density) { type.fontSize.toPx() * 1.4f }
+            with(density) { effectiveFontSize.toPx() * 1.4f }
 
         Row(modifier = Modifier.height(with(density) { totalTextHeight.toDp() })) {
             Gutter(

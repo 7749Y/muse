@@ -327,6 +327,7 @@ fun EditScreen(
                             GeneralText(
                                 text = module.text,
                                 type = ModuleType.SubHeading,
+                                fontSize = headingFontSize(module.headingLevel),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 5.dp)
