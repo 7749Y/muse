@@ -31,6 +31,7 @@ fun GeneralText(
     modifier: Modifier = Modifier,
     paragraphSpacingPx: Float = 0f,
     fontSize: TextUnit? = null,
+    showGutter: Boolean = true,
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
@@ -43,7 +44,7 @@ fun GeneralText(
     )
 
     BoxWithConstraints(modifier = modifier) {
-        val gutterWidthDp = 30.dp
+        val gutterWidthDp = if (showGutter) 30.dp else 0.dp
         val textAreaWidthPx = with(density) {
             (maxWidth - gutterWidthDp).coerceAtLeast(0.dp).toPx().roundToInt()
         }
@@ -69,20 +70,22 @@ fun GeneralText(
             with(density) { effectiveFontSize.toPx() * 1.4f }
 
         Row(modifier = Modifier.height(with(density) { totalTextHeight.toDp() })) {
-            Gutter(
-                itemProvider = type.gutterProvider,
-                totalLines = layoutResult.lineCount,
-                scrollOffsetPx = 0f,
-                lineHeightPx = lineHeightPx,
-                containerHeightPx = totalTextHeight,
-                textStyle = textStyle,
-                modifier = Modifier.fillMaxHeight(),
-                fixedWidth = gutterWidthDp,
-                centerContent = true,
-                textLayoutResult = layoutResult,
-                useLogicalLines = true,
-                adjustedLines = adjustedLines,
-            )
+            if (showGutter) {
+                Gutter(
+                    itemProvider = type.gutterProvider,
+                    totalLines = layoutResult.lineCount,
+                    scrollOffsetPx = 0f,
+                    lineHeightPx = lineHeightPx,
+                    containerHeightPx = totalTextHeight,
+                    textStyle = textStyle,
+                    modifier = Modifier.fillMaxHeight(),
+                    fixedWidth = gutterWidthDp,
+                    centerContent = true,
+                    textLayoutResult = layoutResult,
+                    useLogicalLines = true,
+                    adjustedLines = adjustedLines,
+                )
+            }
 
             Canvas(
                 modifier = Modifier

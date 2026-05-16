@@ -235,7 +235,7 @@ fun EditScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 37.dp, vertical = 11.dp),
+                        .padding(horizontal = 22.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -329,6 +329,7 @@ fun EditScreen(
                                 text = module.text,
                                 type = ModuleType.SubHeading,
                                 fontSize = headingFontSize(module.headingLevel),
+                                showGutter = false,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 5.dp)
