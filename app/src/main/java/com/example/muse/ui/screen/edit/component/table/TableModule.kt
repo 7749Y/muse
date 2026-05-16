@@ -1,9 +1,8 @@
 package com.example.muse.ui.screen.edit.component.table
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,25 +38,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
@@ -90,116 +82,65 @@ fun TableModule(
     val textMeasurer = rememberTextMeasurer()
     val textStyle = TextStyle(color = Color.White, fontSize = 14.sp)
     val density = LocalDensity.current
-    val cellHPx = with(density) { CELL_H_PADDING.toPx() }
-    val cellVPx = with(density) { CELL_V_PADDING.toPx() }
 
     var editingCell by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var editingText by remember { mutableStateOf("") }
-    var isCellEditing by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val screenWidthPx = with(density) { maxWidth.toPx() }
+            val cellHPx = with(density) { CELL_H_PADDING.toPx() }
+            val cellVPx = with(density) { CELL_V_PADDING.toPx() }
 
             val layout = remember(data, screenWidthPx) {
                 calculateLayout(textMeasurer, data, screenWidthPx, textStyle, cellHPx, cellVPx)
             }
 
-            val textLayouts = remember(data, layout, textStyle) {
-                data.cells.mapIndexed { r, row ->
-                    row.mapIndexed { c, text ->
-                        val maxW = (layout.columnWidths[c] - cellHPx * 2).roundToInt().coerceAtLeast(1)
-                        textMeasurer.measure(
-                            text = text,
-                            style = textStyle.copy(
-                                textAlign = data.columnAlignments.getOrNull(c) ?: TextAlign.Start,
-                            ),
-                            constraints = Constraints(maxWidth = maxW)
-                        )
-                    }
-                }
-            }
-
             val scrollState = rememberScrollState()
-            val totalHeightDp = with(density) { layout.totalHeight.toDp() }
+            val needsScroll = layout.totalWidth > screenWidthPx
 
-            fun hitTestCol(px: Float): Int? {
-                var acc = 0f
-                for (c in layout.columnWidths.indices) {
-                    acc += layout.columnWidths[c]
-                    if (px < acc) return c
-                }
-                return null
-            }
-            fun hitTestRow(px: Float): Int? {
-                var acc = 0f
-                for (r in layout.rowHeights.indices) {
-                    acc += layout.rowHeights[r]
-                    if (px < acc) return r
-                }
-                return null
-            }
-
-            val touchModifier = if (isCellEditing) {
-                Modifier.pointerInput(layout) {
-                    detectTapGestures(
-                        onTap = { offset ->
-                            val row = hitTestRow(offset.y)
-                            val col = hitTestCol(offset.x)
-                            if (row != null && col != null) {
-                                editingCell?.let { (r, c) ->
-                                    if (r != row || c != col) {
-                                        onCellChange(r, c, editingText)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (needsScroll) Modifier.horizontalScroll(scrollState) else Modifier)
+            ) {
+                for (r in 0 until data.rows) {
+                    Row(
+                        modifier = Modifier.height(
+                            with(density) { layout.rowHeights[r].toDp() }
+                        )
+                    ) {
+                        for (c in 0 until data.cols) {
+                            TableCell(
+                                text = data.cells[r][c],
+                                width = with(density) { layout.columnWidths[c].toDp() },
+                                height = with(density) { layout.rowHeights[r].toDp() },
+                                textAlign = data.columnAlignments.getOrNull(c)
+                                    ?: TextAlign.Start,
+                                textStyle = textStyle,
+                                isEditingThis = editingCell == Pair(r, c),
+                                onClick = {
+                                    val clicked = Pair(r, c)
+                                    if (editingCell != clicked) {
+                                        editingCell?.let { (er, ec) ->
+                                            onCellChange(er, ec, editingText)
+                                        }
+                                        editingCell = clicked
+                                        editingText = data.cells[r][c]
                                     }
-                                }
-                                editingCell = Pair(row, col)
-                                editingText = data.cells[row][col]
-                            }
-                        },
-                    )
-                }
-            } else Modifier
-
-            val scrollContent: @Composable (Modifier) -> Unit = { canvasModifier ->
-                Box(modifier = canvasModifier) {
-                    Canvas(modifier = Modifier.fillMaxSize().then(touchModifier)) {
-                        drawTableContent(layout, textLayouts, cellHPx, cellVPx)
-                    }
-
-                    editingCell?.let { (r, c) ->
-                        val cellXDp = with(density) { layout.columnWidths.take(c).sum().toDp() }
-                        val cellYDp = with(density) { layout.rowHeights.take(r).sum().toDp() }
-                        val cellWDp = with(density) { layout.columnWidths[c].toDp() }
-                        val cellHDp = with(density) { layout.rowHeights[r].toDp() }
-
-                        Box(
-                            modifier = Modifier
-                                .offset(x = cellXDp, y = cellYDp)
-                                .size(width = cellWDp, height = cellHDp)
-                        ) {
-                            CellEditor(
-                                text = editingText,
+                                },
                                 onTextChange = { editingText = it },
                                 onDone = {
-                                    onCellChange(r, c, editingText)
-                                    editingCell = null
-                                    isCellEditing = false
+                                    // 防护：仅当仍指向当前单元格时才清除
+                                    if (editingCell == Pair(r, c)) {
+                                        onCellChange(r, c, editingText)
+                                        editingCell = null
+                                    }
                                 },
                             )
                         }
                     }
                 }
-            }
-
-            if (layout.totalWidth > screenWidthPx) {
-                val totalWidthDp = with(density) { layout.totalWidth.toDp() }
-                scrollContent(
-                    Modifier.horizontalScroll(scrollState).width(totalWidthDp).height(totalHeightDp)
-                )
-            } else {
-                scrollContent(
-                    Modifier.fillMaxWidth().height(totalHeightDp)
-                )
             }
         }
 
@@ -209,9 +150,51 @@ fun TableModule(
                 cols = data.cols,
                 onDeleteModule = onDeleteModule,
                 onAlignColumn = onAlignColumn,
-                isCellEditing = isCellEditing,
-                onToggleCellEditing = { isCellEditing = !isCellEditing },
                 onTableResize = onTableResize,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TableCell(
+    text: String,
+    width: Dp,
+    height: Dp,
+    textAlign: TextAlign,
+    textStyle: TextStyle,
+    isEditingThis: Boolean,
+    onClick: () -> Unit,
+    onTextChange: (String) -> Unit,
+    onDone: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(height)
+            .border(0.5.dp, GRID_COLOR)
+            .then(if (!isEditingThis) Modifier.clickable(onClick = onClick) else Modifier),
+    ) {
+        if (isEditingThis) {
+            CellEditor(
+                text = text,
+                onTextChange = onTextChange,
+                onDone = onDone,
+            )
+        } else {
+            Text(
+                text = text,
+                style = textStyle.copy(textAlign = textAlign),
+                maxLines = Int.MAX_VALUE,
+                overflow = TextOverflow.Visible,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = CELL_H_PADDING,
+                        end = CELL_H_PADDING,
+                        top = CELL_V_PADDING,
+                        bottom = CELL_V_PADDING,
+                    ),
             )
         }
     }
@@ -225,8 +208,7 @@ private fun CellEditor(
 ) {
     var tfValue by remember { mutableStateOf(TextFieldValue(text, TextRange(text.length))) }
     val focusRequester = remember { FocusRequester() }
-    var hasBeenFocused by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
+    var hasBeenFocused by remember { mutableStateOf(false) }   // ← 新增标记
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -250,9 +232,9 @@ private fun CellEditor(
             .focusRequester(focusRequester)
             .onFocusChanged { focusState ->
                 if (focusState.isFocused) {
-                    hasBeenFocused = true
+                    hasBeenFocused = true          // 获得焦点，标记
                 } else if (hasBeenFocused) {
-                    // 只在已经获得过焦点之后再次失去焦点时才提交
+                    // 只有曾经获得过焦点，之后的失焦才代表真正退出
                     onDone()
                 }
             },
@@ -275,14 +257,10 @@ private fun TableToolbar(
     cols: Int = 3,
     onDeleteModule: () -> Unit = {},
     onAlignColumn: (colIndex: Int, align: TextAlign) -> Unit = { _, _ -> },
-    isCellEditing: Boolean = false,
-    onToggleCellEditing: () -> Unit = {},
     onTableResize: (rows: Int, cols: Int) -> Unit = { _, _ -> },
 ) {
     var rowsText by remember(rows) { mutableStateOf(rows.toString()) }
     var colsText by remember(cols) { mutableStateOf(cols.toString()) }
-
-    val density = LocalDensity.current
 
     fun commitSize() {
         val newRows = (rowsText.toIntOrNull() ?: rows).coerceAtLeast(2)
@@ -325,7 +303,6 @@ private fun TableToolbar(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Row input
         val inputTextStyle = TextStyle(color = Color.White, fontSize = 12.sp)
         BasicTextField(
             value = rowsText,
@@ -363,26 +340,7 @@ private fun TableToolbar(
             decorationBox = { inner -> inner() },
         )
 
-        Spacer(modifier = Modifier.width(6.dp))
-
-        // Edit button — toggles cell editing mode
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(if (isCellEditing) Color(0xFF4A90D9) else Color.Transparent)
-                .clickable(onClick = onToggleCellEditing),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Create,
-                contentDescription = "编辑单元格",
-                tint = if (isCellEditing) Color.White else Color(0xFFB3B3B3),
-                modifier = Modifier.size(18.dp),
-            )
-        }
-
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         IconButton(
             onClick = onDeleteModule,
@@ -398,36 +356,8 @@ private fun TableToolbar(
     }
 }
 
-private fun DrawScope.drawTableContent(
-    layout: TableLayoutResult,
-    textLayouts: List<List<TextLayoutResult>>,
-    cellHPx: Float,
-    cellVPx: Float,
-) {
-    var y = 0f
-    for (r in textLayouts.indices) {
-        var x = 0f
-        val rowH = layout.rowHeights[r]
-        for (c in textLayouts[r].indices) {
-            val colW = layout.columnWidths[c]
-            drawText(
-                textLayouts[r][c],
-                topLeft = Offset(x + cellHPx, y + cellVPx),
-            )
-            drawRect(
-                color = GRID_COLOR,
-                topLeft = Offset(x, y),
-                size = Size(colW, rowH),
-                style = Stroke(width = 0.5f),
-            )
-            x += colW
-        }
-        y += rowH
-    }
-}
-
 internal fun calculateLayout(
-    textMeasurer: TextMeasurer,
+    textMeasurer: androidx.compose.ui.text.TextMeasurer,
     data: TableData,
     screenWidthPx: Float,
     textStyle: TextStyle,
