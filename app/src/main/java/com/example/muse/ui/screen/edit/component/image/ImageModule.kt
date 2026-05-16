@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -227,27 +228,30 @@ fun rememberBitmapFromUri(uri: Uri, targetSizePx: Int = 400): State<Bitmap?> {
 
 private fun loadBitmap(context: Context, uri: Uri, targetSizePx: Int): Bitmap? {
     return try {
-        val resolver = context.contentResolver
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: return null.also { Log.w("ImageModule", "openInputStream returned null: $uri") }
 
         val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { input ->
-            BitmapFactory.decodeStream(input, null, boundsOpts)
-        } ?: return null
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOpts)
+
+        if (boundsOpts.outWidth <= 0 || boundsOpts.outHeight <= 0) {
+            Log.w("ImageModule", "Invalid bounds for $uri: ${boundsOpts.outWidth}x${boundsOpts.outHeight}")
+            return null
+        }
 
         val sampleSize = calcSampleSize(boundsOpts.outWidth, boundsOpts.outHeight, targetSizePx)
-
-        val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
-        resolver.openInputStream(uri)?.use { input ->
-            BitmapFactory.decodeStream(input, null, decodeOpts)
-        }
-    } catch (_: Exception) {
+        val opts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+    } catch (e: Exception) {
+        Log.e("ImageModule", "Failed to load bitmap from $uri", e)
         null
     }
 }
 
 private fun calcSampleSize(width: Int, height: Int, targetMax: Int): Int {
     var sampleSize = 1
-    while (width / (sampleSize * 2) > targetMax && height / (sampleSize * 2) > targetMax) {
+    val maxDim = maxOf(width, height)
+    while (maxDim / (sampleSize * 2) >= targetMax) {
         sampleSize *= 2
     }
     return sampleSize
