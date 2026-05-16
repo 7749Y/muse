@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -61,12 +63,16 @@ fun ImageModule(
     imageUris: List<Uri>,
     modifier: Modifier = Modifier,
     onImageClick: (Int) -> Unit = {},
+    isDeleting: Boolean = false,
+    onDeleteImage: (Int) -> Unit = {},
 ) {
     if (imageUris.isEmpty()) return
 
     ImageGrid(
         imageUris = imageUris,
         onImageClick = onImageClick,
+        isDeleting = isDeleting,
+        onDeleteImage = onDeleteImage,
         modifier = modifier,
     )
 }
@@ -76,6 +82,8 @@ private fun ImageGrid(
     imageUris: List<Uri>,
     onImageClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    isDeleting: Boolean = false,
+    onDeleteImage: (Int) -> Unit = {},
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val spacing = 4.dp
@@ -89,13 +97,37 @@ private fun ImageGrid(
                 ) {
                     rowUris.forEachIndexed { colIdx, uri ->
                         val index = rowIdx * 3 + colIdx
-                        ImageThumbnail(
-                            uri = uri,
+                        Box(
                             modifier = Modifier
                                 .width(itemWidth)
-                                .aspectRatio(1f),
-                            onClick = { onImageClick(index) },
-                        )
+                                .aspectRatio(1f)
+                        ) {
+                            ImageThumbnail(
+                                uri = uri,
+                                modifier = Modifier.fillMaxSize(),
+                                onClick = { onImageClick(index) },
+                            )
+
+                            if (isDeleting) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(2.dp)
+                                        .size(22.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Red)
+                                        .clickable { onDeleteImage(index) },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "删除",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

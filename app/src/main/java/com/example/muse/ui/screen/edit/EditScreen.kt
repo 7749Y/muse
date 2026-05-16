@@ -36,9 +36,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -129,6 +131,7 @@ fun EditScreen(
     var isEditingTitle by remember { mutableStateOf(false) }
     var lightboxUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var lightboxIndex by remember { mutableIntStateOf(0) }
+    var deletingModuleIndex by remember { mutableIntStateOf(-1) }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetMultipleContents(),
@@ -201,6 +204,7 @@ fun EditScreen(
                     indication = null
                 ) {
                     focusManager.clearFocus()
+                    deletingModuleIndex = -1
                 }
         ) {
         Column(
@@ -364,16 +368,39 @@ fun EditScreen(
                             )
                         }
                     } else if (module.type == ModuleType.Image) {
-                        ImageModule(
-                            imageUris = module.imageUris,
-                            onImageClick = { index ->
-                                lightboxUris = module.imageUris
-                                lightboxIndex = index
-                            },
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 5.dp),
-                        )
+                                .padding(horizontal = 5.dp)
+                                .pointerInput(deletingModuleIndex) {
+                                    detectTapGestures(
+                                        onLongPress = { deletingModuleIndex = index }
+                                    )
+                                }
+                        ) {
+                            ImageModule(
+                                imageUris = module.imageUris,
+                                onImageClick = { i ->
+                                    lightboxUris = module.imageUris
+                                    lightboxIndex = i
+                                },
+                                isDeleting = deletingModuleIndex == index,
+                                onDeleteImage = { imageIdx ->
+                                    val newUris = module.imageUris.toMutableList().apply {
+                                        removeAt(imageIdx)
+                                    }
+                                    if (newUris.isEmpty()) {
+                                        modules = modules.toMutableList().apply { removeAt(index) }
+                                        deletingModuleIndex = -1
+                                    } else {
+                                        modules = modules.toMutableList().apply {
+                                            set(index, module.copy(imageUris = newUris))
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                     } else {
                         GeneralText(
                             text = module.text,
