@@ -390,6 +390,18 @@ fun EditScreen(
                                         ))
                                     }
                                 },
+                                onCellChange = { row, col, text ->
+                                    val newCells = td.cells.toMutableList().apply {
+                                        val rowList = this[row].toMutableList()
+                                        rowList[col] = text
+                                        this[row] = rowList
+                                    }
+                                    modules = modules.toMutableList().apply {
+                                        set(index, module.copy(
+                                            tableData = td.copy(cells = newCells)
+                                        ))
+                                    }
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 5.dp),
