@@ -385,23 +385,18 @@ internal fun calculateLayout(
         }
     }
 
+    // 每列取 max(自然宽度, screen/5)，绝不压缩低于 minColWidth
     val colWidths = FloatArray(data.cols) { c -> maxOf(naturalWidths[c], minColWidth) }
     var totalWidth = colWidths.sum()
 
     if (totalWidth < screenWidthPx) {
+        // 总宽度小于屏幕 → 等比拉伸填满
         val ratio = screenWidthPx / totalWidth
         for (c in 0 until data.cols) colWidths[c] *= ratio
         totalWidth = screenWidthPx
-    } else {
-        for (c in 0 until data.cols) {
-            if (naturalWidths[c] < minColWidth && totalWidth > screenWidthPx) {
-                val reduction = colWidths[c] - naturalWidths[c]
-                colWidths[c] = naturalWidths[c]
-                totalWidth -= reduction
-            }
-        }
     }
 
+    // 施加最大约束
     for (c in 0 until data.cols) {
         if (colWidths[c] > maxColWidth) {
             totalWidth -= colWidths[c] - maxColWidth
