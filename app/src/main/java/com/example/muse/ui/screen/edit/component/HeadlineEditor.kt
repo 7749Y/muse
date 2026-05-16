@@ -83,6 +83,16 @@ fun HeadlineEditor(
         FixedCursorTextField(
             value = tfValue,
             onValueChange = { newValue ->
+                // 检测到换行符（物理键盘回车）→ 结束编辑
+                if (newValue.text.contains('\n')) {
+                    val clean = newValue.text.replace("\n", "")
+                    tfValue = tfValue.copy(text = clean)
+                    onTextChange(clean)
+                    val hashResult = HashKey.detectLevel(clean)
+                    if (hashResult != null) onLevelChange(hashResult.first)
+                    focusManager.clearFocus()
+                    return@FixedCursorTextField
+                }
                 tfValue = newValue
                 val hashResult = HashKey.detectLevel(newValue.text)
                 if (hashResult != null) {
@@ -99,7 +109,6 @@ fun HeadlineEditor(
                 fontWeight = FontWeight.Bold,
             ),
             placeholderText = placeholder,
-            singleLine = true,
             enableScroll = false,
             keyboardActions = KeyboardActions(
                 onDone = { focusManager.clearFocus() }

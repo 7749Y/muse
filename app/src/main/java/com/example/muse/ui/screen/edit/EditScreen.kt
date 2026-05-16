@@ -218,32 +218,33 @@ fun EditScreen(
             }
 
             // Title & Tag row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 37.dp, vertical = 11.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // 主标题 — 双击编辑，h1 固定
-                if (isEditingTitle) {
-                    HeadlineEditor(
-                        text = titleText,
-                        onTextChange = { titleText = it },
-                        level = 1,
-                        showDrum = false,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp),
-                        placeholder = "标题",
-                        onFocusLost = { isEditingTitle = false },
-                    )
-                } else {
+            if (isEditingTitle) {
+                // 编辑模式：标题编辑器独占整行
+                HeadlineEditor(
+                    text = titleText,
+                    onTextChange = { titleText = it },
+                    level = 1,
+                    showDrum = false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 37.dp),
+                    placeholder = "标题",
+                    onFocusLost = { isEditingTitle = false },
+                )
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 37.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text(
                         text = titleText.ifEmpty { "标题" },
                         fontSize = headingFontSize(1),
                         fontWeight = FontWeight.Bold,
                         color = if (titleText.isEmpty()) Color.White.copy(alpha = 0.4f) else Color.White,
+                        lineHeight = headingFontSize(1) * 1.4f,
                         modifier = Modifier
                             .weight(1f)
                             .combinedClickable(
@@ -251,32 +252,32 @@ fun EditScreen(
                                 onDoubleClick = { isEditingTitle = true },
                             ),
                     )
-                }
 
-                // Tag toggle
-                Box(
-                    modifier = Modifier
-                        .width(72.dp)
-                        .height(40.dp)
-                        .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp))
-                        .padding(8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    // Tag toggle
+                    Box(
+                        modifier = Modifier
+                            .width(72.dp)
+                            .height(40.dp)
+                            .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp))
+                            .padding(8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_add),
-                            contentDescription = "Add tag",
-                            tint = Color(0xFFB3B3B3),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "tag",
-                            fontSize = 16.sp,
-                            color = Color(0xFFB3B3B3)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_add),
+                                contentDescription = "Add tag",
+                                tint = Color(0xFFB3B3B3),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "tag",
+                                fontSize = 16.sp,
+                                color = Color(0xFFB3B3B3)
+                            )
+                        }
                     }
                 }
             }
