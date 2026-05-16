@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
@@ -24,6 +26,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -56,24 +60,15 @@ import kotlinx.coroutines.withContext
 fun ImageModule(
     imageUris: List<Uri>,
     modifier: Modifier = Modifier,
+    onImageClick: (Int) -> Unit = {},
 ) {
     if (imageUris.isEmpty()) return
 
-    var lightboxIndex by remember { mutableIntStateOf(-1) }
-
     ImageGrid(
         imageUris = imageUris,
-        onImageClick = { lightboxIndex = it },
+        onImageClick = onImageClick,
         modifier = modifier,
     )
-
-    if (lightboxIndex >= 0) {
-        ImageLightbox(
-            imageUris = imageUris,
-            initialIndex = lightboxIndex,
-            onDismiss = { lightboxIndex = -1 },
-        )
-    }
 }
 
 @Composable
@@ -142,7 +137,7 @@ private fun ImageThumbnail(
 }
 
 @Composable
-private fun ImageLightbox(
+fun ImageLightbox(
     imageUris: List<Uri>,
     initialIndex: Int,
     onDismiss: () -> Unit,
@@ -152,63 +147,80 @@ private fun ImageLightbox(
         pageCount = { imageUris.size },
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f))
-    ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-            beyondViewportPageCount = 1,
-        ) { page ->
-            val uri = imageUris[page]
-            val bitmap by rememberBitmapFromUri(uri, targetSizePx = 1200)
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 半透明遮罩 — 点外部关闭
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.4f))
+                .clickable(onClick = onDismiss)
+        )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(onClick = onDismiss),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap!!.asImageBitmap(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    Text(
-                        "加载中...",
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 14.sp,
+        // 浮动卡片 — 径向菜单上方
+        Card(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(5.dp)
+                .fillMaxWidth()
+                .fillMaxHeight(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    beyondViewportPageCount = 1,
+                ) { page ->
+                    val uri = imageUris[page]
+                    val bitmap by rememberBitmapFromUri(uri, targetSizePx = 800)
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap!!.asImageBitmap(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else {
+                            Text(
+                                "加载中...",
+                                color = Color.White.copy(alpha = 0.5f),
+                                fontSize = 14.sp,
+                            )
+                        }
+                    }
+                }
+
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "关闭",
+                        tint = Color.White,
                     )
                 }
+
+                Text(
+                    text = "${pagerState.currentPage + 1} / ${imageUris.size}",
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(8.dp),
+                )
             }
         }
-
-        IconButton(
-            onClick = onDismiss,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Close,
-                contentDescription = "关闭",
-                tint = Color.White,
-            )
-        }
-
-        Text(
-            text = "${pagerState.currentPage + 1} / ${imageUris.size}",
-            color = Color.White.copy(alpha = 0.8f),
-            fontSize = 14.sp,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(16.dp),
-        )
     }
 }
 

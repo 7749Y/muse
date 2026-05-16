@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.geometry.Offset
 import com.example.muse.R
+import com.example.muse.ui.screen.edit.component.image.ImageLightbox
 import com.example.muse.ui.screen.edit.component.image.ImageModule
 import com.example.muse.ui.screen.edit.component.text.GeneralText
 import com.example.muse.ui.screen.edit.component.gutter.GutterItem
@@ -126,6 +127,8 @@ fun EditScreen(
     var titleText by remember { mutableStateOf("") }
     var editingSubHeadingIndex by remember { mutableStateOf<Int?>(null) }
     var isEditingTitle by remember { mutableStateOf(false) }
+    var lightboxUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var lightboxIndex by remember { mutableIntStateOf(0) }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetMultipleContents(),
@@ -363,6 +366,10 @@ fun EditScreen(
                     } else if (module.type == ModuleType.Image) {
                         ImageModule(
                             imageUris = module.imageUris,
+                            onImageClick = { index ->
+                                lightboxUris = module.imageUris
+                                lightboxIndex = index
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 5.dp),
@@ -428,6 +435,18 @@ fun EditScreen(
                 RadialMenuItem("代码块", R.drawable.ic_code) { editingConfig = codeConfig },
             )
         )
+
+            // 图片放大浮动窗口
+            if (lightboxUris.isNotEmpty()) {
+                ImageLightbox(
+                    imageUris = lightboxUris,
+                    initialIndex = lightboxIndex,
+                    onDismiss = {
+                        lightboxUris = emptyList()
+                        lightboxIndex = 0
+                    },
+                )
+            }
         }
     }
 }
