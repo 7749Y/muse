@@ -86,14 +86,28 @@ fun TableModule(
     var editingCell by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var editingText by remember { mutableStateOf("") }
 
+    // 实时编辑的工作副本 — 编辑中的文字即时反映到布局计算中
+    val workingData = remember(data, editingCell, editingText) {
+        if (editingCell != null) {
+            val (er, ec) = editingCell!!
+            data.copy(cells = data.cells.mapIndexed { r, row ->
+                row.mapIndexed { c, cell ->
+                    if (r == er && c == ec) editingText else cell
+                }
+            })
+        } else {
+            data
+        }
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val screenWidthPx = with(density) { maxWidth.toPx() }
             val cellHPx = with(density) { CELL_H_PADDING.toPx() }
             val cellVPx = with(density) { CELL_V_PADDING.toPx() }
 
-            val layout = remember(data, screenWidthPx) {
-                calculateLayout(textMeasurer, data, screenWidthPx, textStyle, cellHPx, cellVPx)
+            val layout = remember(workingData, screenWidthPx) {
+                calculateLayout(textMeasurer, workingData, screenWidthPx, textStyle, cellHPx, cellVPx)
             }
 
             val scrollState = rememberScrollState()
@@ -104,18 +118,18 @@ fun TableModule(
                     .fillMaxWidth()
                     .then(if (needsScroll) Modifier.horizontalScroll(scrollState) else Modifier)
             ) {
-                for (r in 0 until data.rows) {
+                for (r in 0 until workingData.rows) {
                     Row(
                         modifier = Modifier.height(
                             with(density) { layout.rowHeights[r].toDp() }
                         )
                     ) {
-                        for (c in 0 until data.cols) {
+                        for (c in 0 until workingData.cols) {
                             TableCell(
-                                text = data.cells[r][c],
+                                text = workingData.cells[r][c],
                                 width = with(density) { layout.columnWidths[c].toDp() },
                                 height = with(density) { layout.rowHeights[r].toDp() },
-                                textAlign = data.columnAlignments.getOrNull(c)
+                                textAlign = workingData.columnAlignments.getOrNull(c)
                                     ?: TextAlign.Start,
                                 textStyle = textStyle,
                                 isEditingThis = editingCell == Pair(r, c),
@@ -126,12 +140,11 @@ fun TableModule(
                                             onCellChange(er, ec, editingText)
                                         }
                                         editingCell = clicked
-                                        editingText = data.cells[r][c]
+                                        editingText = workingData.cells[r][c]
                                     }
                                 },
                                 onTextChange = { editingText = it },
                                 onDone = {
-                                    // 防护：仅当仍指向当前单元格时才清除
                                     if (editingCell == Pair(r, c)) {
                                         onCellChange(r, c, editingText)
                                         editingCell = null
