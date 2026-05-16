@@ -1,13 +1,28 @@
 package com.example.muse.ui.screen.edit.component.table
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -43,6 +58,9 @@ data class TableLayoutResult(
 fun TableModule(
     tableData: TableData,
     modifier: Modifier = Modifier,
+    isEditing: Boolean = false,
+    onDeleteModule: () -> Unit = {},
+    onAlignColumn: (colIndex: Int, align: TextAlign) -> Unit = { _, _ -> },
 ) {
     val data = remember(tableData) { tableData.initialized() }
     if (data.rows == 0 || data.cols == 0) return
@@ -53,42 +71,101 @@ fun TableModule(
     val cellHPx = with(density) { CELL_H_PADDING.toPx() }
     val cellVPx = with(density) { CELL_V_PADDING.toPx() }
 
-    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        val screenWidthPx = with(density) { maxWidth.toPx() }
+    Column(modifier = modifier.fillMaxWidth()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val screenWidthPx = with(density) { maxWidth.toPx() }
 
-        val layout = remember(data, screenWidthPx) {
-            calculateLayout(textMeasurer, data, screenWidthPx, textStyle, cellHPx, cellVPx)
-        }
+            val layout = remember(data, screenWidthPx) {
+                calculateLayout(textMeasurer, data, screenWidthPx, textStyle, cellHPx, cellVPx)
+            }
 
-        val textLayouts = remember(data, layout, textStyle) {
-            data.cells.mapIndexed { r, row ->
-                row.mapIndexed { c, text ->
-                    val maxW = (layout.columnWidths[c] - cellHPx * 2).roundToInt().coerceAtLeast(1)
-                    textMeasurer.measure(
-                        text = text,
-                        style = textStyle.copy(
-                            textAlign = data.columnAlignments.getOrNull(c) ?: TextAlign.Start,
-                        ),
-                        constraints = Constraints(maxWidth = maxW)
-                    )
+            val textLayouts = remember(data, layout, textStyle) {
+                data.cells.mapIndexed { r, row ->
+                    row.mapIndexed { c, text ->
+                        val maxW = (layout.columnWidths[c] - cellHPx * 2).roundToInt().coerceAtLeast(1)
+                        textMeasurer.measure(
+                            text = text,
+                            style = textStyle.copy(
+                                textAlign = data.columnAlignments.getOrNull(c) ?: TextAlign.Start,
+                            ),
+                            constraints = Constraints(maxWidth = maxW)
+                        )
+                    }
                 }
             }
-        }
 
-        val scrollState = rememberScrollState()
-        val totalHeightDp = with(density) { layout.totalHeight.toDp() }
+            val scrollState = rememberScrollState()
+            val totalHeightDp = with(density) { layout.totalHeight.toDp() }
 
-        if (layout.totalWidth > screenWidthPx) {
-            val totalWidthDp = with(density) { layout.totalWidth.toDp() }
-            Box(modifier = Modifier.horizontalScroll(scrollState)) {
-                Canvas(modifier = Modifier.width(totalWidthDp).height(totalHeightDp)) {
+            if (layout.totalWidth > screenWidthPx) {
+                val totalWidthDp = with(density) { layout.totalWidth.toDp() }
+                Box(modifier = Modifier.horizontalScroll(scrollState)) {
+                    Canvas(modifier = Modifier.width(totalWidthDp).height(totalHeightDp)) {
+                        drawTableContent(layout, textLayouts, cellHPx, cellVPx)
+                    }
+                }
+            } else {
+                Canvas(modifier = Modifier.fillMaxWidth().height(totalHeightDp)) {
                     drawTableContent(layout, textLayouts, cellHPx, cellVPx)
                 }
             }
-        } else {
-            Canvas(modifier = Modifier.fillMaxWidth().height(totalHeightDp)) {
-                drawTableContent(layout, textLayouts, cellHPx, cellVPx)
+        }
+
+        if (isEditing) {
+            TableToolbar(
+                onDeleteModule = onDeleteModule,
+                onAlignColumn = onAlignColumn,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TableToolbar(
+    onDeleteModule: () -> Unit,
+    onAlignColumn: (colIndex: Int, align: TextAlign) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(34.dp)
+            .background(Color(0xFF2A2A2A))
+            .padding(horizontal = 4.dp),
+    ) {
+        // Alignment buttons — apply to all columns
+        listOf(
+            "L" to TextAlign.Start,
+            "C" to TextAlign.Center,
+            "R" to TextAlign.End,
+        ).forEach { (label, align) ->
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .padding(2.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable { onAlignColumn(0, align) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label,
+                    color = Color(0xFFB3B3B3),
+                    fontSize = 12.sp,
+                )
             }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        IconButton(
+            onClick = onDeleteModule,
+            modifier = Modifier.size(28.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Delete,
+                contentDescription = "删除表格",
+                tint = Color(0xFFB3B3B3),
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }

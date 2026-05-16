@@ -372,9 +372,24 @@ fun EditScreen(
                             )
                         }
                     } else if (module.type == ModuleType.Table) {
+                        val isEditingTable = deletingModuleIndex == index
                         module.tableData?.let { td ->
                             TableModule(
                                 tableData = td,
+                                isEditing = true,
+                                onDeleteModule = {
+                                    modules = modules.toMutableList().apply {
+                                        removeAt(index)
+                                    }
+                                },
+                                onAlignColumn = { _, align ->
+                                    val newAligns = td.columnAlignments.map { align }
+                                    modules = modules.toMutableList().apply {
+                                        set(index, module.copy(
+                                            tableData = td.copy(columnAlignments = newAligns)
+                                        ))
+                                    }
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 5.dp),
