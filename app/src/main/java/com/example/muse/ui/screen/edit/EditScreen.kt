@@ -54,6 +54,7 @@ import com.example.muse.ui.screen.edit.component.image.ImageLightbox
 import com.example.muse.ui.screen.edit.component.image.ImageModule
 import com.example.muse.ui.screen.edit.component.table.TableData
 import com.example.muse.ui.screen.edit.component.table.TableMatrixSelector
+import com.example.muse.ui.screen.edit.component.table.TableModule
 import com.example.muse.ui.screen.edit.component.text.GeneralText
 import com.example.muse.ui.screen.edit.component.gutter.GutterItem
 import com.example.muse.ui.screen.edit.component.heading.HashKey
@@ -371,15 +372,14 @@ fun EditScreen(
                             )
                         }
                     } else if (module.type == ModuleType.Table) {
-                        val td = module.tableData
-                        Text(
-                            text = if (td != null) "${td.rows}×${td.cols} 表格" else "表格",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 5.dp, vertical = 12.dp),
-                        )
+                        module.tableData?.let { td ->
+                            TableModule(
+                                tableData = td,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 5.dp),
+                            )
+                        }
                     } else if (module.type == ModuleType.Image) {
                         ImageModule(
                             imageUris = module.imageUris,
