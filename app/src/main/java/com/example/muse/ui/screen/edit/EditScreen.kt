@@ -40,7 +40,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -53,6 +52,8 @@ import androidx.compose.ui.geometry.Offset
 import com.example.muse.R
 import com.example.muse.ui.screen.edit.component.image.ImageLightbox
 import com.example.muse.ui.screen.edit.component.image.ImageModule
+import com.example.muse.ui.screen.edit.component.table.TableData
+import com.example.muse.ui.screen.edit.component.table.TableMatrixSelector
 import com.example.muse.ui.screen.edit.component.text.GeneralText
 import com.example.muse.ui.screen.edit.component.gutter.GutterItem
 import com.example.muse.ui.screen.edit.component.heading.HashKey
@@ -70,6 +71,7 @@ data class SavedModule(
     val paragraphSpacingPx: Float = 0f,
     val headingLevel: Int = 2,
     val imageUris: List<Uri> = emptyList(),
+    val tableData: TableData? = null,
 )
 
 private data class EditorConfig(
@@ -132,6 +134,7 @@ fun EditScreen(
     var lightboxUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var lightboxIndex by remember { mutableIntStateOf(0) }
     var deletingModuleIndex by remember { mutableIntStateOf(-1) }
+    var showTableMatrix by remember { mutableStateOf(false) }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetMultipleContents(),
@@ -367,40 +370,42 @@ fun EditScreen(
                                     ),
                             )
                         }
-                    } else if (module.type == ModuleType.Image) {
-                        Box(
+                    } else if (module.type == ModuleType.Table) {
+                        val td = module.tableData
+                        Text(
+                            text = if (td != null) "${td.rows}×${td.cols} 表格" else "表格",
+                            color = Color.White,
+                            fontSize = 16.sp,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 5.dp)
-                                .pointerInput(deletingModuleIndex) {
-                                    detectTapGestures(
-                                        onLongPress = { deletingModuleIndex = index }
-                                    )
+                                .padding(horizontal = 5.dp, vertical = 12.dp),
+                        )
+                    } else if (module.type == ModuleType.Image) {
+                        ImageModule(
+                            imageUris = module.imageUris,
+                            onImageClick = { i ->
+                                lightboxUris = module.imageUris
+                                lightboxIndex = i
+                            },
+                            isDeleting = deletingModuleIndex == index,
+                            onDeleteImage = { imageIdx ->
+                                val newUris = module.imageUris.toMutableList().apply {
+                                    removeAt(imageIdx)
                                 }
-                        ) {
-                            ImageModule(
-                                imageUris = module.imageUris,
-                                onImageClick = { i ->
-                                    lightboxUris = module.imageUris
-                                    lightboxIndex = i
-                                },
-                                isDeleting = deletingModuleIndex == index,
-                                onDeleteImage = { imageIdx ->
-                                    val newUris = module.imageUris.toMutableList().apply {
-                                        removeAt(imageIdx)
+                                if (newUris.isEmpty()) {
+                                    modules = modules.toMutableList().apply { removeAt(index) }
+                                    deletingModuleIndex = -1
+                                } else {
+                                    modules = modules.toMutableList().apply {
+                                        set(index, module.copy(imageUris = newUris))
                                     }
-                                    if (newUris.isEmpty()) {
-                                        modules = modules.toMutableList().apply { removeAt(index) }
-                                        deletingModuleIndex = -1
-                                    } else {
-                                        modules = modules.toMutableList().apply {
-                                            set(index, module.copy(imageUris = newUris))
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
+                                }
+                            },
+                            onDeleteModule = { deletingModuleIndex = index },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 5.dp),
+                        )
                     } else {
                         GeneralText(
                             text = module.text,
@@ -446,7 +451,7 @@ fun EditScreen(
                 RadialMenuItem("图片", R.drawable.ic_image) {
                     imagePicker.launch("image/*")
                 },
-                RadialMenuItem("表格", R.drawable.ic_table) { /* TODO: 添加表格模块 */ },
+                RadialMenuItem("表格", R.drawable.ic_table) { showTableMatrix = true },
                 RadialMenuItem("子标题", R.drawable.ic_subheading) {
                     // 1. 先保存并删除空内容（若文本为空）
                     editingSubHeadingIndex?.let { commitSubHeading(it) }
@@ -462,6 +467,23 @@ fun EditScreen(
                 RadialMenuItem("代码块", R.drawable.ic_code) { editingConfig = codeConfig },
             )
         )
+
+            if (showTableMatrix) {
+                TableMatrixSelector(
+                    onDismiss = { showTableMatrix = false },
+                    onConfirm = { rows, cols ->
+                        showTableMatrix = false
+                        modules = modules + SavedModule(
+                            "",
+                            ModuleType.Table,
+                            tableData = TableData(
+                                rows = rows,
+                                cols = cols,
+                            ).initialized(),
+                        )
+                    },
+                )
+            }
 
             // 图片放大浮动窗口
             if (lightboxUris.isNotEmpty()) {
