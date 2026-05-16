@@ -1,6 +1,9 @@
 package com.example.muse.ui.screen.edit
 
 import android.content.res.Configuration
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.geometry.Offset
 import com.example.muse.R
+import com.example.muse.ui.screen.edit.component.image.ImageModule
 import com.example.muse.ui.screen.edit.component.text.GeneralText
 import com.example.muse.ui.screen.edit.component.gutter.GutterItem
 import com.example.muse.ui.screen.edit.component.heading.HashKey
@@ -62,6 +66,7 @@ data class SavedModule(
     val type: ModuleType,
     val paragraphSpacingPx: Float = 0f,
     val headingLevel: Int = 2,
+    val imageUris: List<Uri> = emptyList(),
 )
 
 private data class EditorConfig(
@@ -121,6 +126,22 @@ fun EditScreen(
     var titleText by remember { mutableStateOf("") }
     var editingSubHeadingIndex by remember { mutableStateOf<Int?>(null) }
     var isEditingTitle by remember { mutableStateOf(false) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetMultipleContents(),
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            val lastIsImage = modules.isNotEmpty() && modules.last().type == ModuleType.Image
+            if (lastIsImage) {
+                modules = modules.toMutableList().apply {
+                    val i = size - 1
+                    set(i, get(i).copy(imageUris = get(i).imageUris + uris))
+                }
+            } else {
+                modules = modules + SavedModule("", ModuleType.Image, imageUris = uris)
+            }
+        }
+    }
 
     val scrollFocusConnection = remember(focusManager) {
         object : NestedScrollConnection {
@@ -339,6 +360,13 @@ fun EditScreen(
                                     ),
                             )
                         }
+                    } else if (module.type == ModuleType.Image) {
+                        ImageModule(
+                            imageUris = module.imageUris,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 5.dp),
+                        )
                     } else {
                         GeneralText(
                             text = module.text,
@@ -381,7 +409,9 @@ fun EditScreen(
             items = listOf(
                 RadialMenuItem("列表", R.drawable.ic_list) { editingConfig = listConfig },
                 RadialMenuItem("引用", R.drawable.ic_quote) { editingConfig = quoteConfig },
-                RadialMenuItem("图片", R.drawable.ic_image) { /* TODO: 添加图片模块 */ },
+                RadialMenuItem("图片", R.drawable.ic_image) {
+                    imagePicker.launch("image/*")
+                },
                 RadialMenuItem("表格", R.drawable.ic_table) { /* TODO: 添加表格模块 */ },
                 RadialMenuItem("子标题", R.drawable.ic_subheading) {
                     // 1. 先保存并删除空内容（若文本为空）
