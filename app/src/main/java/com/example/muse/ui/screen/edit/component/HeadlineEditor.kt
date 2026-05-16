@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -59,7 +60,7 @@ fun HeadlineEditor(
 ) {
     val focusManager = LocalFocusManager.current
     // 不把 text 加入 keys —— 编辑期间外部 text 不会变化，避免重建 TextFieldValue 导致光标跳回开头
-    var tfValue by remember { mutableStateOf(TextFieldValue(text)) }
+    var tfValue by remember { mutableStateOf(TextFieldValue(text, TextRange(text.length))) }
     var everFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
