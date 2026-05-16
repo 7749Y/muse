@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -65,16 +66,39 @@ fun ImageModule(
     onImageClick: (Int) -> Unit = {},
     isDeleting: Boolean = false,
     onDeleteImage: (Int) -> Unit = {},
+    onDeleteModule: () -> Unit = {},
 ) {
     if (imageUris.isEmpty()) return
 
-    ImageGrid(
-        imageUris = imageUris,
-        onImageClick = onImageClick,
-        isDeleting = isDeleting,
-        onDeleteImage = onDeleteImage,
-        modifier = modifier,
-    )
+    Column(modifier = modifier) {
+        ImageGrid(
+            imageUris = imageUris,
+            onImageClick = onImageClick,
+            isDeleting = isDeleting,
+            onDeleteImage = onDeleteImage,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(22.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(
+                onClick = onDeleteModule,
+                modifier = Modifier.size(22.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "删除",
+                    tint = Color(0xFFB3B3B3),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
 }
 
 @Composable
