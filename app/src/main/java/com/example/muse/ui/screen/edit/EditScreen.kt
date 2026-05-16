@@ -204,10 +204,14 @@ fun EditScreen(
             },
             onDoneClick = { text ->
                 if (editingModuleIndex >= 0) {
-                    modules = modules.toMutableList().apply {
-                        set(editingModuleIndex, get(editingModuleIndex).copy(text = text))
+                    if (text.isBlank()) {
+                        modules = modules.toMutableList().apply { removeAt(editingModuleIndex) }
+                    } else {
+                        modules = modules.toMutableList().apply {
+                            set(editingModuleIndex, get(editingModuleIndex).copy(text = text))
+                        }
                     }
-                } else {
+                } else if (text.isNotBlank()) {
                     modules = modules + SavedModule(text, config.type, config.paragraphSpacingPx)
                 }
                 editingConfig = null
