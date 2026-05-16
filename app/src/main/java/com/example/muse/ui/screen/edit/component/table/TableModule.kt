@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Delete
@@ -52,6 +54,7 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -79,6 +82,7 @@ fun TableModule(
     onDeleteModule: () -> Unit = {},
     onAlignColumn: (colIndex: Int, align: TextAlign) -> Unit = { _, _ -> },
     onCellChange: (row: Int, col: Int, text: String) -> Unit = { _, _, _ -> },
+    onTableResize: (rows: Int, cols: Int) -> Unit = { _, _ -> },
 ) {
     val data = remember(tableData) { tableData.initialized() }
     if (data.rows == 0 || data.cols == 0) return
@@ -201,10 +205,13 @@ fun TableModule(
 
         if (isEditing) {
             TableToolbar(
+                rows = data.rows,
+                cols = data.cols,
                 onDeleteModule = onDeleteModule,
                 onAlignColumn = onAlignColumn,
                 isCellEditing = isCellEditing,
                 onToggleCellEditing = { isCellEditing = !isCellEditing },
+                onTableResize = onTableResize,
             )
         }
     }
@@ -264,11 +271,29 @@ private fun CellEditor(
 
 @Composable
 private fun TableToolbar(
-    onDeleteModule: () -> Unit,
-    onAlignColumn: (colIndex: Int, align: TextAlign) -> Unit,
+    rows: Int = 3,
+    cols: Int = 3,
+    onDeleteModule: () -> Unit = {},
+    onAlignColumn: (colIndex: Int, align: TextAlign) -> Unit = { _, _ -> },
     isCellEditing: Boolean = false,
     onToggleCellEditing: () -> Unit = {},
+    onTableResize: (rows: Int, cols: Int) -> Unit = { _, _ -> },
 ) {
+    var rowsText by remember(rows) { mutableStateOf(rows.toString()) }
+    var colsText by remember(cols) { mutableStateOf(cols.toString()) }
+
+    val density = LocalDensity.current
+
+    fun commitSize() {
+        val newRows = (rowsText.toIntOrNull() ?: rows).coerceAtLeast(2)
+        val newCols = (colsText.toIntOrNull() ?: cols).coerceAtLeast(1)
+        rowsText = newRows.toString()
+        colsText = newCols.toString()
+        if (newRows != rows || newCols != cols) {
+            onTableResize(newRows, newCols)
+        }
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -299,6 +324,46 @@ private fun TableToolbar(
         }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        // Row input
+        val inputTextStyle = TextStyle(color = Color.White, fontSize = 12.sp)
+        BasicTextField(
+            value = rowsText,
+            onValueChange = {
+                if (it.all { c -> c.isDigit() }) rowsText = it
+            },
+            modifier = Modifier
+                .width(30.dp)
+                .background(Color(0xFF1E1E1E), RoundedCornerShape(4.dp))
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+                .onFocusChanged { if (!it.isFocused) commitSize() },
+            textStyle = inputTextStyle.copy(textAlign = TextAlign.Center),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            keyboardActions = KeyboardActions(onDone = { commitSize() }),
+            cursorBrush = SolidColor(Color.White),
+            decorationBox = { inner -> inner() },
+        )
+        Text(" × ", color = Color(0xFFB3B3B3), fontSize = 12.sp)
+        BasicTextField(
+            value = colsText,
+            onValueChange = {
+                if (it.all { c -> c.isDigit() }) colsText = it
+            },
+            modifier = Modifier
+                .width(30.dp)
+                .background(Color(0xFF1E1E1E), RoundedCornerShape(4.dp))
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+                .onFocusChanged { if (!it.isFocused) commitSize() },
+            textStyle = inputTextStyle.copy(textAlign = TextAlign.Center),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            keyboardActions = KeyboardActions(onDone = { commitSize() }),
+            cursorBrush = SolidColor(Color.White),
+            decorationBox = { inner -> inner() },
+        )
+
+        Spacer(modifier = Modifier.width(6.dp))
 
         // Edit button — toggles cell editing mode
         Box(

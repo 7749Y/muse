@@ -43,6 +43,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -399,6 +400,25 @@ fun EditScreen(
                                     modules = modules.toMutableList().apply {
                                         set(index, module.copy(
                                             tableData = td.copy(cells = newCells)
+                                        ))
+                                    }
+                                },
+                                onTableResize = { newRows, newCols ->
+                                    val newCells = td.cells.take(newRows).map { row ->
+                                        row.take(newCols) + List(maxOf(0, newCols - row.size)) { "" }
+                                    }
+                                    val newAligns = td.columnAlignments.take(newCols) +
+                                        List(maxOf(0, newCols - td.columnAlignments.size)) {
+                                            TextAlign.Start
+                                        }
+                                    modules = modules.toMutableList().apply {
+                                        set(index, module.copy(
+                                            tableData = td.copy(
+                                                cells = newCells,
+                                                rows = newRows,
+                                                cols = newCols,
+                                                columnAlignments = newAligns,
+                                            )
                                         ))
                                     }
                                 },
