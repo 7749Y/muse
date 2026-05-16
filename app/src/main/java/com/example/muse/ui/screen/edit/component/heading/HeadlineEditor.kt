@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit.component
+package com.example.muse.ui.screen.edit.component.heading
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer

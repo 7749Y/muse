@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit.component
+package com.example.muse.ui.screen.edit.component.gutter
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxHeight

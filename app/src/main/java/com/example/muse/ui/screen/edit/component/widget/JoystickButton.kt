@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit.component
+package com.example.muse.ui.screen.edit.component.widget
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size

@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit.component
+package com.example.muse.ui.screen.edit.component.widget
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background

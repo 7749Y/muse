@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit.component
+package com.example.muse.ui.screen.edit.component.heading
 
 /**
  * 解析文本开头的 "# " 前缀，检测标题等级。

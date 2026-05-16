@@ -1,4 +1,6 @@
-package com.example.muse.ui.screen.edit.component
+package com.example.muse.ui.screen.edit.component.text
+
+import com.example.muse.ui.screen.edit.component.gutter.GutterItem
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight

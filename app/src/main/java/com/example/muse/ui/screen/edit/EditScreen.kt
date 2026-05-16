@@ -46,14 +46,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.geometry.Offset
 import com.example.muse.R
-import com.example.muse.ui.screen.edit.component.GeneralText
-import com.example.muse.ui.screen.edit.component.GutterItem
-import com.example.muse.ui.screen.edit.component.HashKey
-import com.example.muse.ui.screen.edit.component.HeadlineEditor
-import com.example.muse.ui.screen.edit.component.ModuleType
-import com.example.muse.ui.screen.edit.component.RadialMenu
-import com.example.muse.ui.screen.edit.component.RadialMenuItem
-import com.example.muse.ui.screen.edit.component.headingFontSize
+import com.example.muse.ui.screen.edit.component.text.GeneralText
+import com.example.muse.ui.screen.edit.component.gutter.GutterItem
+import com.example.muse.ui.screen.edit.component.heading.HashKey
+import com.example.muse.ui.screen.edit.component.heading.HeadlineEditor
+import com.example.muse.ui.screen.edit.component.text.ModuleType
+import com.example.muse.ui.screen.edit.component.widget.RadialMenu
+import com.example.muse.ui.screen.edit.component.widget.RadialMenuItem
+import com.example.muse.ui.screen.edit.component.heading.headingFontSize
 import com.example.muse.ui.theme.MuseTheme
 import androidx.compose.runtime.remember
 

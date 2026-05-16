@@ -1,4 +1,6 @@
-package com.example.muse.ui.screen.edit.component
+package com.example.muse.ui.screen.edit.component.gutter
+
+import com.example.muse.ui.screen.edit.component.gutter.GutterItem
 
 /** 纯行号（视觉行从1开始） */
 fun numberLineProvider(): (Int) -> GutterItem = { line -> GutterItem.Number(line + 1) }

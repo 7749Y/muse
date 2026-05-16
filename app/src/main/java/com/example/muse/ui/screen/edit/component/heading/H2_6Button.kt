@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit.component
+package com.example.muse.ui.screen.edit.component.heading
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable

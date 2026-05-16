@@ -3,9 +3,9 @@ package com.example.muse.ui.screen.edit
 import android.content.res.Configuration
 import android.graphics.Rect
 import android.view.ViewTreeObserver
-import com.example.muse.ui.screen.edit.component.GutterItem
-import com.example.muse.ui.screen.edit.component.JoystickButton
-import com.example.muse.ui.screen.edit.component.ToolbarButton
+import com.example.muse.ui.screen.edit.component.gutter.GutterItem
+import com.example.muse.ui.screen.edit.component.widget.JoystickButton
+import com.example.muse.ui.screen.edit.component.widget.ToolbarButton
 import com.example.muse.ui.screen.edit.core.EditorViewModel
 import com.example.muse.ui.screen.edit.core.UndoRedoManager
 import com.example.muse.ui.screen.edit.core.moveCursor

@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit.component
+package com.example.muse.ui.screen.edit.component.text
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,6 +17,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import com.example.muse.ui.screen.edit.component.gutter.Gutter
 import com.example.muse.ui.screen.edit.core.buildAdjustedLines
 import kotlin.math.roundToInt
 

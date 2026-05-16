@@ -1,4 +1,4 @@
-package com.example.muse.ui.screen.edit.component
+package com.example.muse.ui.screen.edit.component.gutter
 
 sealed class GutterItem {
     /** 不绘制任何内容 */

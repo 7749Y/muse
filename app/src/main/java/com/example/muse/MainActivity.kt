@@ -17,9 +17,9 @@ import androidx.compose.ui.unit.dp
 import com.example.muse.ui.screen.browse.BrowseScreen
 import com.example.muse.ui.screen.edit.EditScreen
 import com.example.muse.ui.screen.edit.GeneralEditScreen
-import com.example.muse.ui.screen.edit.component.GeneralText
-import com.example.muse.ui.screen.edit.component.ModuleType
-import com.example.muse.ui.screen.edit.component.RadialMenuTestScreen
+import com.example.muse.ui.screen.edit.component.text.GeneralText
+import com.example.muse.ui.screen.edit.component.text.ModuleType
+import com.example.muse.ui.screen.edit.component.widget.RadialMenuTestScreen
 import com.example.muse.ui.screen.home.HomeScreen
 import com.example.muse.ui.theme.MuseTheme
 
