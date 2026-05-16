@@ -137,6 +137,7 @@ fun EditScreen(
     var lightboxIndex by remember { mutableIntStateOf(0) }
     var deletingModuleIndex by remember { mutableIntStateOf(-1) }
     var showTableMatrix by remember { mutableStateOf(false) }
+    var editingModuleIndex by remember { mutableIntStateOf(-1) }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetMultipleContents(),
@@ -184,14 +185,33 @@ fun EditScreen(
         }
     }
 
+    fun moduleTypeToConfig(type: ModuleType): EditorConfig? = when (type) {
+        ModuleType.List -> listConfig
+        ModuleType.Code -> codeConfig
+        ModuleType.Quote -> quoteConfig
+        else -> null
+    }
+
     if (editingConfig != null) {
         val config = editingConfig!!
+        val initial = if (editingModuleIndex >= 0) modules[editingModuleIndex].text else ""
         GeneralEditScreen(
             title = config.title,
-            onBackClick = { editingConfig = null },
-            onDoneClick = { text ->
-                modules = modules + SavedModule(text, config.type, config.paragraphSpacingPx)
+            initialText = initial,
+            onBackClick = {
                 editingConfig = null
+                editingModuleIndex = -1
+            },
+            onDoneClick = { text ->
+                if (editingModuleIndex >= 0) {
+                    modules = modules.toMutableList().apply {
+                        set(editingModuleIndex, get(editingModuleIndex).copy(text = text))
+                    }
+                } else {
+                    modules = modules + SavedModule(text, config.type, config.paragraphSpacingPx)
+                }
+                editingConfig = null
+                editingModuleIndex = -1
             },
             gutterProvider = config.gutterProvider,
             textStyle = config.textStyle,
@@ -460,7 +480,20 @@ fun EditScreen(
                             paragraphSpacingPx = module.paragraphSpacingPx,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 5.dp),
+                                .padding(horizontal = 5.dp)
+                                .combinedClickable(
+                                    onClick = {
+                                        focusManager.clearFocus()
+                                        deletingModuleIndex = -1
+                                    },
+                                    onDoubleClick = {
+                                        val cfg = moduleTypeToConfig(module.type)
+                                        if (cfg != null) {
+                                            editingModuleIndex = index
+                                            editingConfig = cfg
+                                        }
+                                    },
+                                ),
                         )
                     }
                     if (index < modules.size - 1) {
@@ -493,8 +526,14 @@ fun EditScreen(
                 }
             },
             items = listOf(
-                RadialMenuItem("列表", R.drawable.ic_list) { editingConfig = listConfig },
-                RadialMenuItem("引用", R.drawable.ic_quote) { editingConfig = quoteConfig },
+                RadialMenuItem("列表", R.drawable.ic_list) {
+                    editingModuleIndex = -1
+                    editingConfig = listConfig
+                },
+                RadialMenuItem("引用", R.drawable.ic_quote) {
+                    editingModuleIndex = -1
+                    editingConfig = quoteConfig
+                },
                 RadialMenuItem("图片", R.drawable.ic_image) {
                     imagePicker.launch("image/*")
                 },
@@ -511,7 +550,10 @@ fun EditScreen(
                     modules = modules + SavedModule("", ModuleType.SubHeading, headingLevel = 2)
                     editingSubHeadingIndex = idx
                 },
-                RadialMenuItem("代码块", R.drawable.ic_code) { editingConfig = codeConfig },
+                RadialMenuItem("代码块", R.drawable.ic_code) {
+                    editingModuleIndex = -1
+                    editingConfig = codeConfig
+                },
             )
         )
 

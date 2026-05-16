@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -64,6 +65,7 @@ import kotlin.math.abs
 @Composable
 fun GeneralEditScreen(
     title: String = "标题",
+    initialText: String = "",
     onBackClick: () -> Unit = {},
     onDoneClick: (text: String) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -75,7 +77,9 @@ fun GeneralEditScreen(
     ),
     paragraphSpacingPx: Float = 50f,
 ) {
-    var tfValue by remember { mutableStateOf(TextFieldValue("")) }
+    var tfValue by remember(initialText) {
+        mutableStateOf(TextFieldValue(initialText, TextRange(initialText.length)))
+    }
     val focusRequester = remember { FocusRequester() }
     val editorViewModel = remember { EditorViewModel() }
     val undoManager = remember {
