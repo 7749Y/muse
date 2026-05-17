@@ -42,7 +42,7 @@ import com.example.muse.ui.theme.MuseTheme
 @Composable
 fun HomeScreen(
     primaryTags: List<PrimaryTagEntity> = emptyList(),
-    onTagClick: (Long) -> Unit = {},
+    onTagClick: (tagId: Long, tagName: String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -158,7 +158,7 @@ private fun SearchBarSection(modifier: Modifier = Modifier) {
 @Composable
 private fun BottomFrameSection(
     primaryTags: List<PrimaryTagEntity>,
-    onTagClick: (Long) -> Unit,
+    onTagClick: (tagId: Long, tagName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -196,10 +196,9 @@ private fun BottomFrameSection(
             primaryTags.forEach { tag ->
                 TagButton(
                     text = tag.name,
-                    onClick = { onTagClick(tag.id) },
+                    onClick = { onTagClick(tag.id, tag.name) },
                 )
             }
-            TagButton(text = "全部")
             AddTagButton()
         }
     }

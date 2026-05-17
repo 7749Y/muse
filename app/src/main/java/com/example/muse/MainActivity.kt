@@ -4,25 +4,24 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.example.muse.data.local.DocumentRepository
+import com.example.muse.data.local.DocumentPreview
 import com.example.muse.data.local.MuseDatabase
 import com.example.muse.data.local.PrimaryTagEntity
-import com.example.muse.data.local.SecondaryTagEntity
-import com.example.muse.ui.screen.edit.EditScreen
+import com.example.muse.ui.screen.browse.BrowseScreen
 import com.example.muse.ui.screen.home.HomeScreen
 import com.example.muse.ui.theme.MuseTheme
 import kotlinx.coroutines.launch
+
+private sealed class Screen {
+    data object Home : Screen()
+    data class Browse(val tagId: Long, val tagName: String) : Screen()
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,9 +30,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             MuseTheme(darkTheme = true) {
                 val db = remember { MuseDatabase.getInstance(this@MainActivity) }
+                val repository = remember { com.example.muse.data.local.DocumentRepository(db) }
                 val scope = rememberCoroutineScope()
                 var primaryTags by remember { mutableStateOf(emptyList<PrimaryTagEntity>()) }
                 var loaded by remember { mutableStateOf(false) }
+                var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
+                var articles by remember { mutableStateOf(emptyList<DocumentPreview>()) }
 
                 LaunchedEffect(Unit) {
                     if (db.tagDao().getPrimaryTagCount() == 0) {
@@ -48,11 +50,28 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (loaded) {
-                    HomeScreen(primaryTags = primaryTags)
+                    when (val screen = currentScreen) {
+                        is Screen.Home -> HomeScreen(
+                            primaryTags = primaryTags,
+                            onTagClick = { tagId, tagName ->
+                                currentScreen = Screen.Browse(tagId, tagName)
+                                scope.launch {
+                                    articles = repository.getDocumentPreviewsByPrimaryTag(tagId)
+                                }
+                            },
+                        )
+
+                        is Screen.Browse -> BrowseScreen(
+                            title = screen.tagName,
+                            articles = articles,
+                            onBackClick = {
+                                currentScreen = Screen.Home
+                                articles = emptyList()
+                            },
+                        )
+                    }
                 }
             }
         }
     }
 }
-
-

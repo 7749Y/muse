@@ -27,16 +27,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.muse.R
+import com.example.muse.data.local.DocumentPreview
+import com.example.muse.data.local.SecondaryTagEntity
 import com.example.muse.ui.theme.MuseTheme
 
 @Composable
 fun BrowseScreen(
+    title: String = "",
+    articles: List<DocumentPreview> = emptyList(),
     onBackClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
@@ -67,7 +72,7 @@ fun BrowseScreen(
                 }
 
                 Text(
-                    text = "标签名",
+                    text = title,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontSize = 24.sp,
@@ -89,17 +94,37 @@ fun BrowseScreen(
                 }
             }
 
-            // Browse Frame
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 27.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                item { EntryCard(title = "标题", description = "描述", tags = listOf("Key", "Key", "Key")) }
-                item { EntryCard(title = "标题", description = "描述", tags = listOf("Key", "Key", "Key")) }
-                item { EntryCard(title = "标题", description = "描述", tags = listOf("Key", "Key", "Key")) }
+            // Article list
+            if (articles.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "暂无内容",
+                        color = Color(0xFF666666),
+                        fontSize = 16.sp,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 27.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(articles.size) { i ->
+                        val article = articles[i]
+                        EntryCard(
+                            title = article.title,
+                            description = article.description,
+                            tags = article.secondaryTags.map { it.name },
+                        )
+                    }
+                }
             }
         }
 
@@ -127,7 +152,7 @@ private fun EntryCard(
     title: String,
     description: String,
     tags: List<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
@@ -145,19 +170,25 @@ private fun EntryCard(
                 letterSpacing = (-0.48).sp
             )
 
-            Text(
-                text = description,
-                fontSize = 20.sp,
-                color = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            if (description.isNotBlank()) {
+                Text(
+                    text = description,
+                    fontSize = 20.sp,
+                    color = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(top = 8.dp),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
 
-            Row(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                tags.forEach { tag ->
-                    TagChip(text = tag)
+            if (tags.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    tags.forEach { tag ->
+                        TagChip(text = tag)
+                    }
                 }
             }
         }
@@ -189,6 +220,19 @@ private fun TagChip(text: String) {
 @Composable
 private fun BrowseScreenPreview() {
     MuseTheme(darkTheme = true) {
-        BrowseScreen()
+        BrowseScreen(
+            title = "编程",
+            articles = listOf(
+                DocumentPreview(
+                    documentId = 1,
+                    title = "Kotlin协程笔记",
+                    description = "协程是 Kotlin 中处理异步编程的轻量级方案，可以挂起而不阻塞线程。",
+                    secondaryTags = listOf(
+                        SecondaryTagEntity(id = 1, name = "Kotlin"),
+                        SecondaryTagEntity(id = 2, name = "Android"),
+                    ),
+                ),
+            ),
+        )
     }
 }
