@@ -263,7 +263,10 @@ fun EditScreen(
                 Spacer(modifier = Modifier.weight(1f))
 
                 IconButton(
-                    onClick = { onSaveClick(modules, titleText) },
+                    onClick = {
+                        focusManager.clearFocus()
+                        onSaveClick(modules, titleText)
+                    },
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
