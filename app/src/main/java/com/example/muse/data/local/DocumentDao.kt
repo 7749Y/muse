@@ -26,4 +26,7 @@ interface DocumentDao {
 
     @Query("UPDATE documents SET primary_tag_id = :primaryTagId WHERE id = :documentId")
     suspend fun updatePrimaryTag(documentId: Long, primaryTagId: Long?)
+
+    @Query("SELECT * FROM documents WHERE primary_tag_id = :tagId ORDER BY updatedAt DESC")
+    suspend fun getDocumentsByPrimaryTagOnce(tagId: Long): List<DocumentEntity>
 }

@@ -8,6 +8,13 @@ data class DocumentWithModules(
     val secondaryTags: List<SecondaryTagEntity> = emptyList(),
 )
 
+data class DocumentPreview(
+    val documentId: Long,
+    val title: String,
+    val description: String,
+    val secondaryTags: List<SecondaryTagEntity>,
+)
+
 class DocumentRepository(private val db: MuseDatabase) {
 
     private val documentDao = db.documentDao()
@@ -73,6 +80,22 @@ class DocumentRepository(private val db: MuseDatabase) {
             modules = modules,
             secondaryTags = secondaryTags,
         )
+    }
+
+    suspend fun getDocumentPreviewsByPrimaryTag(tagId: Long): List<DocumentPreview> {
+        val docs = documentDao.getDocumentsByPrimaryTagOnce(tagId)
+        return docs.map { doc ->
+            val blocks = blockDao.getBlocksForDocumentOnce(doc.id)
+            val modules = ModuleConverter.toModules(blocks)
+            val description = modules.firstOrNull()?.text?.trim() ?: ""
+            val secondaryTags = tagDao.getSecondaryTagsForDocument(doc.id)
+            DocumentPreview(
+                documentId = doc.id,
+                title = doc.name,
+                description = description,
+                secondaryTags = secondaryTags,
+            )
+        }
     }
 
     suspend fun deleteDocument(id: Long) {
