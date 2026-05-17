@@ -66,6 +66,9 @@ import com.example.muse.ui.screen.edit.component.widget.RadialMenuItem
 import com.example.muse.ui.screen.edit.component.heading.headingFontSize
 import com.example.muse.ui.theme.MuseTheme
 import androidx.compose.runtime.remember
+import com.example.muse.data.local.PrimaryTagEntity
+import com.example.muse.data.local.SecondaryTagEntity
+import com.example.muse.ui.screen.edit.component.tag.TagDialog
 
 data class SavedModule(
     val text: String,
@@ -127,6 +130,12 @@ fun EditScreen(
     moduleSpacing: Dp = 0.dp,
     initialModules: List<SavedModule> = emptyList(),
     initialTitle: String = "",
+    primaryTags: List<PrimaryTagEntity> = emptyList(),
+    secondaryTags: List<SecondaryTagEntity> = emptyList(),
+    selectedPrimaryTagId: Long? = null,
+    selectedSecondaryTagIds: Set<Long> = emptySet(),
+    onTagsChanged: (primaryTagId: Long?, secondaryTagIds: List<Long>) -> Unit = { _, _ -> },
+    onCreateSecondaryTag: suspend (String) -> Long = { 0L },
 ) {
     val focusManager = LocalFocusManager.current
     var editingConfig by remember { mutableStateOf<EditorConfig?>(null) }
@@ -139,6 +148,7 @@ fun EditScreen(
     var deletingModuleIndex by remember { mutableIntStateOf(-1) }
     var showTableMatrix by remember { mutableStateOf(false) }
     var editingModuleIndex by remember { mutableIntStateOf(-1) }
+    var showTagDialog by remember { mutableStateOf(false) }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetMultipleContents(),
@@ -319,7 +329,8 @@ fun EditScreen(
                             .width(72.dp)
                             .height(40.dp)
                             .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp))
-                            .padding(8.dp),
+                            .padding(8.dp)
+                            .clickable { showTagDialog = true },
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
@@ -592,6 +603,22 @@ fun EditScreen(
                         lightboxUris = emptyList()
                         lightboxIndex = 0
                     },
+                )
+            }
+
+            // 标签对话框
+            if (showTagDialog) {
+                TagDialog(
+                    primaryTags = primaryTags,
+                    secondaryTags = secondaryTags,
+                    selectedPrimaryTagId = selectedPrimaryTagId,
+                    selectedSecondaryTagIds = selectedSecondaryTagIds,
+                    onDismiss = { showTagDialog = false },
+                    onConfirm = { pId, sIds ->
+                        showTagDialog = false
+                        onTagsChanged(pId, sIds)
+                    },
+                    onCreateSecondaryTag = onCreateSecondaryTag,
                 )
             }
         }

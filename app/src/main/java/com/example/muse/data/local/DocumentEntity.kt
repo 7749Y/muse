@@ -1,5 +1,6 @@
 package com.example.muse.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -13,5 +14,6 @@ data class DocumentEntity(
     val starred: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "primary_tag_id")
     val primaryTagId: Long? = null,
 )

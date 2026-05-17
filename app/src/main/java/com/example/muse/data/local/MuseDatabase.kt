@@ -54,7 +54,7 @@ abstract class MuseDatabase : RoomDatabase() {
                     )
                 """)
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_document_secondary_tag_secondaryTagId` ON `document_secondary_tag` (`secondaryTagId`)")
-                db.execSQL("ALTER TABLE `documents` ADD COLUMN `primary_tag_id` INTEGER REFERENCES `primary_tags`(`id`)")
+                db.execSQL("ALTER TABLE `documents` ADD COLUMN `primary_tag_id` INTEGER")
             }
         }
 

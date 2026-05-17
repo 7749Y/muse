@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.muse.data.local.DocumentRepository
 import com.example.muse.data.local.MuseDatabase
+import com.example.muse.data.local.PrimaryTagEntity
+import com.example.muse.data.local.SecondaryTagEntity
 import com.example.muse.ui.screen.edit.EditScreen
 import com.example.muse.ui.theme.MuseTheme
 import kotlinx.coroutines.launch
@@ -35,12 +37,20 @@ class MainActivity : ComponentActivity() {
                 var documentId by remember { mutableLongStateOf(0L) }
                 var title by remember { mutableStateOf("") }
                 var loaded by remember { mutableStateOf(false) }
+                var primaryTags by remember { mutableStateOf(emptyList<PrimaryTagEntity>()) }
+                var secondaryTags by remember { mutableStateOf(emptyList<SecondaryTagEntity>()) }
+                var selPrimaryTagId by remember { mutableStateOf<Long?>(null) }
+                var selSecondaryTagIds by remember { mutableStateOf(emptySet<Long>()) }
 
                 LaunchedEffect(Unit) {
                     val doc = repository.getOrCreateDefaultDocument()
                     modules = doc.modules
                     title = doc.document.name
                     documentId = doc.document.id
+                    primaryTags = db.tagDao().getAllPrimaryTagsOnce()
+                    secondaryTags = db.tagDao().getAllSecondaryTagsOnce()
+                    selPrimaryTagId = doc.document.primaryTagId
+                    selSecondaryTagIds = doc.secondaryTags.map { it.id }.toSet()
                     loaded = true
                 }
 
@@ -49,6 +59,10 @@ class MainActivity : ComponentActivity() {
                         moduleSpacing = 22.dp,
                         initialModules = modules,
                         initialTitle = title,
+                        primaryTags = primaryTags,
+                        secondaryTags = secondaryTags,
+                        selectedPrimaryTagId = selPrimaryTagId,
+                        selectedSecondaryTagIds = selSecondaryTagIds,
                         onSaveClick = { currentModules, currentTitle ->
                             scope.launch {
                                 repository.saveDocument(
@@ -57,6 +71,22 @@ class MainActivity : ComponentActivity() {
                                     documentId = documentId,
                                 )
                             }
+                        },
+                        onTagsChanged = { pId, sIds ->
+                            scope.launch {
+                                repository.saveDocument(
+                                    name = title,
+                                    modules = modules,
+                                    documentId = documentId,
+                                    primaryTagId = pId,
+                                )
+                                repository.saveDocumentSecondaryTags(documentId, sIds)
+                            }
+                            selPrimaryTagId = pId
+                            selSecondaryTagIds = sIds.toSet()
+                        },
+                        onCreateSecondaryTag = { name ->
+                            db.tagDao().insertSecondaryTag(SecondaryTagEntity(name = name))
                         },
                     )
                 }
