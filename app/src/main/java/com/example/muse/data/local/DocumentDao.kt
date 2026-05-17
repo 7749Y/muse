@@ -23,4 +23,7 @@ interface DocumentDao {
 
     @Query("DELETE FROM documents WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("UPDATE documents SET primary_tag_id = :primaryTagId WHERE id = :documentId")
+    suspend fun updatePrimaryTag(documentId: Long, primaryTagId: Long?)
 }

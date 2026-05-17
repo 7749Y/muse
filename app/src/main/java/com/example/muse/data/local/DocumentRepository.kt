@@ -5,18 +5,20 @@ import com.example.muse.ui.screen.edit.SavedModule
 data class DocumentWithModules(
     val document: DocumentEntity,
     val modules: List<SavedModule>,
+    val secondaryTags: List<SecondaryTagEntity> = emptyList(),
 )
 
 class DocumentRepository(private val db: MuseDatabase) {
 
     private val documentDao = db.documentDao()
     private val blockDao = db.blockDao()
+    private val tagDao = db.tagDao()
 
     suspend fun saveDocument(
         name: String,
-        tags: String = "",
         modules: List<SavedModule>,
         documentId: Long? = null,
+        primaryTagId: Long? = null,
     ): Long {
         val now = System.currentTimeMillis()
         val docId: Long
@@ -27,7 +29,7 @@ class DocumentRepository(private val db: MuseDatabase) {
                 DocumentEntity(
                     id = docId,
                     name = name,
-                    tags = tags,
+                    primaryTagId = primaryTagId,
                     updatedAt = now,
                 )
             )
@@ -35,7 +37,7 @@ class DocumentRepository(private val db: MuseDatabase) {
             docId = documentDao.insert(
                 DocumentEntity(
                     name = name,
-                    tags = tags,
+                    primaryTagId = primaryTagId,
                     createdAt = now,
                     updatedAt = now,
                 )
@@ -52,11 +54,25 @@ class DocumentRepository(private val db: MuseDatabase) {
         return docId
     }
 
+    suspend fun saveDocumentSecondaryTags(documentId: Long, secondaryTagIds: List<Long>) {
+        tagDao.deleteSecondaryTagsForDocument(documentId)
+        if (secondaryTagIds.isNotEmpty()) {
+            tagDao.insertDocumentSecondaryTags(
+                secondaryTagIds.map { DocumentSecondaryTagCrossRef(documentId, it) }
+            )
+        }
+    }
+
     suspend fun loadDocument(id: Long): DocumentWithModules? {
         val doc = documentDao.getDocumentByIdOnce(id) ?: return null
         val blocks = blockDao.getBlocksForDocumentOnce(id)
         val modules = ModuleConverter.toModules(blocks)
-        return DocumentWithModules(document = doc, modules = modules)
+        val secondaryTags = tagDao.getSecondaryTagsForDocument(id)
+        return DocumentWithModules(
+            document = doc,
+            modules = modules,
+            secondaryTags = secondaryTags,
+        )
     }
 
     suspend fun deleteDocument(id: Long) {
@@ -67,12 +83,17 @@ class DocumentRepository(private val db: MuseDatabase) {
         var doc = documentDao.getDocumentByIdOnce(1)
         if (doc == null) {
             val id = documentDao.insert(
-                DocumentEntity(name = "default", tags = "", starred = false)
+                DocumentEntity(name = "default", starred = false)
             )
             doc = documentDao.getDocumentByIdOnce(id)!!
         }
         val blocks = blockDao.getBlocksForDocumentOnce(doc.id)
         val modules = ModuleConverter.toModules(blocks)
-        return DocumentWithModules(document = doc, modules = modules)
+        val secondaryTags = tagDao.getSecondaryTagsForDocument(doc.id)
+        return DocumentWithModules(
+            document = doc,
+            modules = modules,
+            secondaryTags = secondaryTags,
+        )
     }
 }
