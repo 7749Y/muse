@@ -122,15 +122,16 @@ private val quoteConfig = EditorConfig(
 @Composable
 fun EditScreen(
     onBackClick: () -> Unit = {},
-    onSaveClick: (modules: List<SavedModule>) -> Unit = {},
+    onSaveClick: (modules: List<SavedModule>, title: String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     moduleSpacing: Dp = 0.dp,
     initialModules: List<SavedModule> = emptyList(),
+    initialTitle: String = "",
 ) {
     val focusManager = LocalFocusManager.current
     var editingConfig by remember { mutableStateOf<EditorConfig?>(null) }
     var modules by remember { mutableStateOf(initialModules) }
-    var titleText by remember { mutableStateOf("") }
+    var titleText by remember(initialTitle) { mutableStateOf(initialTitle) }
     var editingSubHeadingIndex by remember { mutableStateOf<Int?>(null) }
     var isEditingTitle by remember { mutableStateOf(false) }
     var lightboxUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
@@ -262,7 +263,7 @@ fun EditScreen(
                 Spacer(modifier = Modifier.weight(1f))
 
                 IconButton(
-                    onClick = { onSaveClick(modules) },
+                    onClick = { onSaveClick(modules, titleText) },
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(

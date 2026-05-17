@@ -33,11 +33,13 @@ class MainActivity : ComponentActivity() {
 
                 var modules by remember { mutableStateOf(emptyList<com.example.muse.ui.screen.edit.SavedModule>()) }
                 var documentId by remember { mutableLongStateOf(0L) }
+                var title by remember { mutableStateOf("") }
                 var loaded by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
                     val doc = repository.getOrCreateDefaultDocument()
                     modules = doc.modules
+                    title = doc.document.name
                     documentId = doc.document.id
                     loaded = true
                 }
@@ -46,10 +48,11 @@ class MainActivity : ComponentActivity() {
                     EditScreen(
                         moduleSpacing = 22.dp,
                         initialModules = modules,
-                        onSaveClick = { currentModules ->
+                        initialTitle = title,
+                        onSaveClick = { currentModules, currentTitle ->
                             scope.launch {
                                 repository.saveDocument(
-                                    name = "default",
+                                    name = currentTitle,
                                     modules = currentModules,
                                     documentId = documentId,
                                 )

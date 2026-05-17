@@ -18,7 +18,7 @@ object ModuleConverter {
             val meta = JSONObject()
 
             // paragraphSpacingPx — 仅当非默认值时存储
-            if (module.paragraphSpacingPx != 0f) {
+                if (module.paragraphSpacingPx != 0f && module.paragraphSpacingPx.isFinite()) {
                 meta.put(KEY_PS, module.paragraphSpacingPx)
             }
 
@@ -58,7 +58,8 @@ object ModuleConverter {
             SavedModule(
                 text = block.content,
                 type = type,
-                paragraphSpacingPx = meta?.optDouble(KEY_PS)?.toFloat() ?: 0f,
+                paragraphSpacingPx = meta?.optDouble(KEY_PS)?.toFloat()
+                    ?.takeIf { !it.isNaN() } ?: 0f,
                 headingLevel = block.headingLevel ?: 2,
                 imageUris = parseUris(meta?.optJSONArray(KEY_URIS)),
                 tableData = parseTable(type, block.content, meta),
