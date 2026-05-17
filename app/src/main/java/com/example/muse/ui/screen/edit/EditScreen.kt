@@ -10,11 +10,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -239,7 +239,6 @@ fun EditScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .imePadding()
         ) {
             // Navigation bar
             Row(
@@ -340,43 +339,145 @@ fun EditScreen(
             }
 
             // 可滚动的已保存模块列表
-            Column(
+            BoxWithConstraints(
                 modifier = Modifier
                     .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .nestedScroll(scrollFocusConnection)
+                    .fillMaxWidth()
             ) {
-                modules.forEachIndexed { index, module ->
-                    if (module.type == ModuleType.SubHeading) {
-                        if (editingSubHeadingIndex == index) {
-                            HeadlineEditor(
-                                text = module.text,
-                                onTextChange = { newText ->
-                                    modules = modules.toMutableList().apply {
-                                        val current = get(index)
-                                        val hashResult = HashKey.detectLevel(newText)
-                                        val newLevel = hashResult?.first ?: current.headingLevel
-                                        set(index, current.copy(
-                                            text = newText,
-                                            headingLevel = newLevel,
-                                        ))
-                                    }
+                val bottomSpace = maxHeight / 2f
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .nestedScroll(scrollFocusConnection)
+                ) {
+                    modules.forEachIndexed { index, module ->
+                        if (module.type == ModuleType.SubHeading) {
+                            if (editingSubHeadingIndex == index) {
+                                HeadlineEditor(
+                                    text = module.text,
+                                    onTextChange = { newText ->
+                                        modules = modules.toMutableList().apply {
+                                            val current = get(index)
+                                            val hashResult = HashKey.detectLevel(newText)
+                                            val newLevel = hashResult?.first ?: current.headingLevel
+                                            set(index, current.copy(
+                                                text = newText,
+                                                headingLevel = newLevel,
+                                            ))
+                                        }
+                                    },
+                                    level = module.headingLevel,
+                                    onLevelChange = { newLevel ->
+                                        modules = modules.toMutableList().apply {
+                                            set(index, get(index).copy(headingLevel = newLevel))
+                                        }
+                                    },
+                                    showDrum = true,
+                                    onFocusLost = { finalText ->
+                                        if (editingSubHeadingIndex != index) return@HeadlineEditor
+                                        editingSubHeadingIndex = null
+                                        if (finalText.isBlank()) {
+                                            modules = modules.toMutableList().apply { removeAt(index) }
+                                        }
+                                    },
+                                    placeholder = "输入子标题...",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 5.dp),
+                                )
+                            } else {
+                                GeneralText(
+                                    text = module.text,
+                                    type = ModuleType.SubHeading,
+                                    fontSize = headingFontSize(module.headingLevel),
+                                    showGutter = false,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 5.dp)
+                                        .combinedClickable(
+                                            onClick = {},
+                                            onDoubleClick = { editingSubHeadingIndex = index },
+                                        ),
+                                )
+                            }
+                        } else if (module.type == ModuleType.Table) {
+                            val isEditingTable = deletingModuleIndex == index
+                            module.tableData?.let { td ->
+                                TableModule(
+                                    tableData = td,
+                                    isEditing = true,
+                                    onDeleteModule = {
+                                        modules = modules.toMutableList().apply {
+                                            removeAt(index)
+                                        }
+                                    },
+                                    onAlignColumn = { _, align ->
+                                        val newAligns = td.columnAlignments.map { align }
+                                        modules = modules.toMutableList().apply {
+                                            set(index, module.copy(
+                                                tableData = td.copy(columnAlignments = newAligns)
+                                            ))
+                                        }
+                                    },
+                                    onCellChange = { row, col, text ->
+                                        val newCells = td.cells.toMutableList().apply {
+                                            val rowList = this[row].toMutableList()
+                                            rowList[col] = text
+                                            this[row] = rowList
+                                        }
+                                        modules = modules.toMutableList().apply {
+                                            set(index, module.copy(
+                                                tableData = td.copy(cells = newCells)
+                                            ))
+                                        }
+                                    },
+                                    onTableResize = { newRows, newCols ->
+                                        val newCells = td.cells.take(newRows).map { row ->
+                                            row.take(newCols) + List(maxOf(0, newCols - row.size)) { "" }
+                                        }
+                                        val newAligns = td.columnAlignments.take(newCols) +
+                                            List(maxOf(0, newCols - td.columnAlignments.size)) {
+                                                TextAlign.Start
+                                            }
+                                        modules = modules.toMutableList().apply {
+                                            set(index, module.copy(
+                                                tableData = td.copy(
+                                                    cells = newCells,
+                                                    rows = newRows,
+                                                    cols = newCols,
+                                                    columnAlignments = newAligns,
+                                                )
+                                            ))
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 5.dp),
+                                )
+                            }
+                        } else if (module.type == ModuleType.Image) {
+                            ImageModule(
+                                imageUris = module.imageUris,
+                                onImageClick = { i ->
+                                    lightboxUris = module.imageUris
+                                    lightboxIndex = i
                                 },
-                                level = module.headingLevel,
-                                onLevelChange = { newLevel ->
-                                    modules = modules.toMutableList().apply {
-                                        set(index, get(index).copy(headingLevel = newLevel))
+                                isDeleting = deletingModuleIndex == index,
+                                onDeleteImage = { imageIdx ->
+                                    val newUris = module.imageUris.toMutableList().apply {
+                                        removeAt(imageIdx)
                                     }
-                                },
-                                showDrum = true,
-                                onFocusLost = { finalText ->
-                                    if (editingSubHeadingIndex != index) return@HeadlineEditor
-                                    editingSubHeadingIndex = null
-                                    if (finalText.isBlank()) {
+                                    if (newUris.isEmpty()) {
                                         modules = modules.toMutableList().apply { removeAt(index) }
+                                        deletingModuleIndex = -1
+                                    } else {
+                                        modules = modules.toMutableList().apply {
+                                            set(index, module.copy(imageUris = newUris))
+                                        }
                                     }
                                 },
-                                placeholder = "输入子标题...",
+                                onDeleteModule = { deletingModuleIndex = index },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 5.dp),
@@ -384,182 +485,82 @@ fun EditScreen(
                         } else {
                             GeneralText(
                                 text = module.text,
-                                type = ModuleType.SubHeading,
-                                fontSize = headingFontSize(module.headingLevel),
-                                showGutter = false,
+                                type = module.type,
+                                paragraphSpacingPx = module.paragraphSpacingPx,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 5.dp)
                                     .combinedClickable(
-                                        onClick = {},
-                                        onDoubleClick = { editingSubHeadingIndex = index },
+                                        onClick = {
+                                            focusManager.clearFocus()
+                                            deletingModuleIndex = -1
+                                        },
+                                        onDoubleClick = {
+                                            val cfg = moduleTypeToConfig(module.type)
+                                            if (cfg != null) {
+                                                editingModuleIndex = index
+                                                editingConfig = cfg
+                                            }
+                                        },
                                     ),
                             )
                         }
-                    } else if (module.type == ModuleType.Table) {
-                        val isEditingTable = deletingModuleIndex == index
-                        module.tableData?.let { td ->
-                            TableModule(
-                                tableData = td,
-                                isEditing = true,
-                                onDeleteModule = {
-                                    modules = modules.toMutableList().apply {
-                                        removeAt(index)
-                                    }
-                                },
-                                onAlignColumn = { _, align ->
-                                    val newAligns = td.columnAlignments.map { align }
-                                    modules = modules.toMutableList().apply {
-                                        set(index, module.copy(
-                                            tableData = td.copy(columnAlignments = newAligns)
-                                        ))
-                                    }
-                                },
-                                onCellChange = { row, col, text ->
-                                    val newCells = td.cells.toMutableList().apply {
-                                        val rowList = this[row].toMutableList()
-                                        rowList[col] = text
-                                        this[row] = rowList
-                                    }
-                                    modules = modules.toMutableList().apply {
-                                        set(index, module.copy(
-                                            tableData = td.copy(cells = newCells)
-                                        ))
-                                    }
-                                },
-                                onTableResize = { newRows, newCols ->
-                                    val newCells = td.cells.take(newRows).map { row ->
-                                        row.take(newCols) + List(maxOf(0, newCols - row.size)) { "" }
-                                    }
-                                    val newAligns = td.columnAlignments.take(newCols) +
-                                        List(maxOf(0, newCols - td.columnAlignments.size)) {
-                                            TextAlign.Start
-                                        }
-                                    modules = modules.toMutableList().apply {
-                                        set(index, module.copy(
-                                            tableData = td.copy(
-                                                cells = newCells,
-                                                rows = newRows,
-                                                cols = newCols,
-                                                columnAlignments = newAligns,
-                                            )
-                                        ))
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 5.dp),
-                            )
+                        if (index < modules.size - 1) {
+                            Spacer(modifier = Modifier.height(moduleSpacing))
                         }
-                    } else if (module.type == ModuleType.Image) {
-                        ImageModule(
-                            imageUris = module.imageUris,
-                            onImageClick = { i ->
-                                lightboxUris = module.imageUris
-                                lightboxIndex = i
-                            },
-                            isDeleting = deletingModuleIndex == index,
-                            onDeleteImage = { imageIdx ->
-                                val newUris = module.imageUris.toMutableList().apply {
-                                    removeAt(imageIdx)
-                                }
-                                if (newUris.isEmpty()) {
-                                    modules = modules.toMutableList().apply { removeAt(index) }
-                                    deletingModuleIndex = -1
-                                } else {
-                                    modules = modules.toMutableList().apply {
-                                        set(index, module.copy(imageUris = newUris))
-                                    }
-                                }
-                            },
-                            onDeleteModule = { deletingModuleIndex = index },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 5.dp),
-                        )
-                    } else {
-                        GeneralText(
-                            text = module.text,
-                            type = module.type,
-                            paragraphSpacingPx = module.paragraphSpacingPx,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 5.dp)
-                                .combinedClickable(
-                                    onClick = {
-                                        focusManager.clearFocus()
-                                        deletingModuleIndex = -1
-                                    },
-                                    onDoubleClick = {
-                                        val cfg = moduleTypeToConfig(module.type)
-                                        if (cfg != null) {
-                                            editingModuleIndex = index
-                                            editingConfig = cfg
-                                        }
-                                    },
-                                ),
-                        )
                     }
-                    if (index < modules.size - 1) {
-                        Spacer(modifier = Modifier.height(moduleSpacing))
-                    }
+                    // 底部添加按钮 — 作为模块列表最后一个元素
+                    RadialMenu(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 88.dp),
+                        centerButton = {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(100.dp))
+                                    .border(4.dp, Color.White, RoundedCornerShape(100.dp))
+                                    .padding(6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_add),
+                                    contentDescription = "Add module",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        },
+                        items = listOf(
+                            RadialMenuItem("列表", R.drawable.ic_list) {
+                                editingModuleIndex = -1
+                                editingConfig = listConfig
+                            },
+                            RadialMenuItem("引用", R.drawable.ic_quote) {
+                                editingModuleIndex = -1
+                                editingConfig = quoteConfig
+                            },
+                            RadialMenuItem("图片", R.drawable.ic_image) {
+                                imagePicker.launch("image/*")
+                            },
+                            RadialMenuItem("表格", R.drawable.ic_table) { showTableMatrix = true },
+                            RadialMenuItem("子标题", R.drawable.ic_subheading) {
+                                editingSubHeadingIndex?.let { commitSubHeading(it) }
+                                editingSubHeadingIndex = null
+                                val idx = modules.size
+                                modules = modules + SavedModule("", ModuleType.SubHeading, headingLevel = 2)
+                                editingSubHeadingIndex = idx
+                            },
+                            RadialMenuItem("代码块", R.drawable.ic_code) {
+                                editingModuleIndex = -1
+                                editingConfig = codeConfig
+                            },
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(bottomSpace))
                 }
             }
         }
-
-        // 径向菜单 — 按下滑动选择模块类型
-        RadialMenu(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 94.dp, bottom = 152.dp),
-            centerButton = {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(100.dp))
-                        .border(4.dp, Color.White, RoundedCornerShape(100.dp))
-                        .padding(6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_add),
-                        contentDescription = "Add module",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            },
-            items = listOf(
-                RadialMenuItem("列表", R.drawable.ic_list) {
-                    editingModuleIndex = -1
-                    editingConfig = listConfig
-                },
-                RadialMenuItem("引用", R.drawable.ic_quote) {
-                    editingModuleIndex = -1
-                    editingConfig = quoteConfig
-                },
-                RadialMenuItem("图片", R.drawable.ic_image) {
-                    imagePicker.launch("image/*")
-                },
-                RadialMenuItem("表格", R.drawable.ic_table) { showTableMatrix = true },
-                RadialMenuItem("子标题", R.drawable.ic_subheading) {
-                    // 1. 先保存并删除空内容（若文本为空）
-                    editingSubHeadingIndex?.let { commitSubHeading(it) }
-
-                    // 2. 临时清空编辑状态，防止旧编辑器的 onFocusLost 干扰
-                    editingSubHeadingIndex = null
-
-                    // 3. 添加新子标题并进入编辑
-                    val idx = modules.size
-                    modules = modules + SavedModule("", ModuleType.SubHeading, headingLevel = 2)
-                    editingSubHeadingIndex = idx
-                },
-                RadialMenuItem("代码块", R.drawable.ic_code) {
-                    editingModuleIndex = -1
-                    editingConfig = codeConfig
-                },
-            )
-        )
 
             if (showTableMatrix) {
                 TableMatrixSelector(
