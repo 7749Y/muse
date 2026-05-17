@@ -3,6 +3,7 @@ package com.example.muse.ui.screen.home
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,11 +36,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.muse.R
+import com.example.muse.data.local.PrimaryTagEntity
 import com.example.muse.ui.theme.MuseTheme
-//主页UI完成
+
 @Composable
 fun HomeScreen(
-    modifier: Modifier = Modifier
+    primaryTags: List<PrimaryTagEntity> = emptyList(),
+    onTagClick: (Long) -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
@@ -70,7 +74,10 @@ fun HomeScreen(
             SearchBarSection(modifier = Modifier.padding(vertical = 20.dp))
 
             // Bottom frame
-            BottomFrameSection()
+            BottomFrameSection(
+                primaryTags = primaryTags,
+                onTagClick = onTagClick,
+            )
         }
 
         // Settings icon
@@ -149,7 +156,11 @@ private fun SearchBarSection(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun BottomFrameSection(modifier: Modifier = Modifier) {
+private fun BottomFrameSection(
+    primaryTags: List<PrimaryTagEntity>,
+    onTagClick: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -182,21 +193,26 @@ private fun BottomFrameSection(modifier: Modifier = Modifier) {
                 .fillMaxHeight(),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            TagButton(text = "tag1")
-            TagButton(text = "tag2")
+            primaryTags.forEach { tag ->
+                TagButton(
+                    text = tag.name,
+                    onClick = { onTagClick(tag.id) },
+                )
+            }
             AddTagButton()
         }
     }
 }
 
 @Composable
-private fun TagButton(text: String) {
+private fun TagButton(text: String, onClick: () -> Unit = {}) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(36.dp)
             .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp))
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 8.dp)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -232,6 +248,12 @@ private fun AddTagButton() {
 @Composable
 private fun HomeScreenPreview() {
     MuseTheme(darkTheme = true) {
-        HomeScreen()
+        HomeScreen(
+            primaryTags = listOf(
+                PrimaryTagEntity(id = 1, name = "编程"),
+                PrimaryTagEntity(id = 2, name = "美术"),
+                PrimaryTagEntity(id = 3, name = "音乐"),
+            ),
+        )
     }
 }

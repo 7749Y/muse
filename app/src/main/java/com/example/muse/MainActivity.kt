@@ -43,6 +43,15 @@ class MainActivity : ComponentActivity() {
                 var selSecondaryTagIds by remember { mutableStateOf(emptySet<Long>()) }
 
                 LaunchedEffect(Unit) {
+                    // 播种默认一级标签
+                    if (db.tagDao().getPrimaryTagCount() == 0) {
+                        db.tagDao().insertPrimaryTags(listOf(
+                            PrimaryTagEntity(name = "编程"),
+                            PrimaryTagEntity(name = "美术"),
+                            PrimaryTagEntity(name = "音乐"),
+                        ))
+                    }
+
                     val doc = repository.getOrCreateDefaultDocument()
                     modules = doc.modules
                     title = doc.document.name

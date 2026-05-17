@@ -26,6 +26,12 @@ interface TagDao {
     @Query("DELETE FROM primary_tags WHERE id = :id")
     suspend fun deletePrimaryTag(id: Long)
 
+    @Query("SELECT COUNT(*) FROM primary_tags")
+    suspend fun getPrimaryTagCount(): Int
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertPrimaryTags(tags: List<PrimaryTagEntity>)
+
     // ── Secondary tags ──
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
