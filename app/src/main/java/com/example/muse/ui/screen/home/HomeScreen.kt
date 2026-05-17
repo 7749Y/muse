@@ -199,6 +199,7 @@ private fun BottomFrameSection(
                     onClick = { onTagClick(tag.id) },
                 )
             }
+            TagButton(text = "全部")
             AddTagButton()
         }
     }

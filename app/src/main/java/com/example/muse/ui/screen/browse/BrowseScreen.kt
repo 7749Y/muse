@@ -60,7 +60,7 @@ fun BrowseScreen(
                     modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_home),
+                        painter = painterResource(R.drawable.ic_back),
                         contentDescription = "Back",
                         tint = Color.White
                     )

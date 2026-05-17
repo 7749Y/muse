@@ -20,6 +20,7 @@ import com.example.muse.data.local.MuseDatabase
 import com.example.muse.data.local.PrimaryTagEntity
 import com.example.muse.data.local.SecondaryTagEntity
 import com.example.muse.ui.screen.edit.EditScreen
+import com.example.muse.ui.screen.home.HomeScreen
 import com.example.muse.ui.theme.MuseTheme
 import kotlinx.coroutines.launch
 
@@ -30,20 +31,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             MuseTheme(darkTheme = true) {
                 val db = remember { MuseDatabase.getInstance(this@MainActivity) }
-                val repository = remember { DocumentRepository(db) }
                 val scope = rememberCoroutineScope()
-
-                var modules by remember { mutableStateOf(emptyList<com.example.muse.ui.screen.edit.SavedModule>()) }
-                var documentId by remember { mutableLongStateOf(0L) }
-                var title by remember { mutableStateOf("") }
-                var loaded by remember { mutableStateOf(false) }
                 var primaryTags by remember { mutableStateOf(emptyList<PrimaryTagEntity>()) }
-                var secondaryTags by remember { mutableStateOf(emptyList<SecondaryTagEntity>()) }
-                var selPrimaryTagId by remember { mutableStateOf<Long?>(null) }
-                var selSecondaryTagIds by remember { mutableStateOf(emptySet<Long>()) }
+                var loaded by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
-                    // 播种默认一级标签
                     if (db.tagDao().getPrimaryTagCount() == 0) {
                         db.tagDao().insertPrimaryTags(listOf(
                             PrimaryTagEntity(name = "编程"),
@@ -51,59 +43,16 @@ class MainActivity : ComponentActivity() {
                             PrimaryTagEntity(name = "音乐"),
                         ))
                     }
-
-                    val doc = repository.getOrCreateDefaultDocument()
-                    modules = doc.modules
-                    title = doc.document.name
-                    documentId = doc.document.id
                     primaryTags = db.tagDao().getAllPrimaryTagsOnce()
-                    secondaryTags = db.tagDao().getAllSecondaryTagsOnce()
-                    selPrimaryTagId = doc.document.primaryTagId
-                    selSecondaryTagIds = doc.secondaryTags.map { it.id }.toSet()
                     loaded = true
                 }
 
                 if (loaded) {
-                    EditScreen(
-                        moduleSpacing = 22.dp,
-                        initialModules = modules,
-                        initialTitle = title,
-                        primaryTags = primaryTags,
-                        secondaryTags = secondaryTags,
-                        selectedPrimaryTagId = selPrimaryTagId,
-                        selectedSecondaryTagIds = selSecondaryTagIds,
-                        onSaveClick = { currentModules, currentTitle ->
-                            scope.launch {
-                                repository.saveDocument(
-                                    name = currentTitle,
-                                    modules = currentModules,
-                                    documentId = documentId,
-                                    primaryTagId = selPrimaryTagId,
-                                )
-                                repository.saveDocumentSecondaryTags(documentId, selSecondaryTagIds.toList())
-                            }
-                        },
-                        onTagsChanged = { pId, sIds ->
-                            scope.launch {
-                                repository.saveDocument(
-                                    name = title,
-                                    modules = modules,
-                                    documentId = documentId,
-                                    primaryTagId = pId,
-                                )
-                                repository.saveDocumentSecondaryTags(documentId, sIds)
-                            }
-                            selPrimaryTagId = pId
-                            selSecondaryTagIds = sIds.toSet()
-                        },
-                        onCreateSecondaryTag = { name ->
-                            val newId = db.tagDao().insertSecondaryTag(SecondaryTagEntity(name = name))
-                            secondaryTags = secondaryTags + SecondaryTagEntity(id = newId, name = name)
-                            newId
-                        },
-                    )
+                    HomeScreen(primaryTags = primaryTags)
                 }
             }
         }
     }
 }
+
+
