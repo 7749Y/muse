@@ -122,7 +122,7 @@ private val quoteConfig = EditorConfig(
 @Composable
 fun EditScreen(
     onBackClick: () -> Unit = {},
-    onSaveClick: () -> Unit = {},
+    onSaveClick: (modules: List<SavedModule>) -> Unit = {},
     modifier: Modifier = Modifier,
     moduleSpacing: Dp = 0.dp,
     initialModules: List<SavedModule> = emptyList(),
@@ -262,7 +262,7 @@ fun EditScreen(
                 Spacer(modifier = Modifier.weight(1f))
 
                 IconButton(
-                    onClick = onSaveClick,
+                    onClick = { onSaveClick(modules) },
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
