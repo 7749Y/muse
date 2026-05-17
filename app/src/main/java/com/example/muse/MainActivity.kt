@@ -69,7 +69,9 @@ class MainActivity : ComponentActivity() {
                                     name = currentTitle,
                                     modules = currentModules,
                                     documentId = documentId,
+                                    primaryTagId = selPrimaryTagId,
                                 )
+                                repository.saveDocumentSecondaryTags(documentId, selSecondaryTagIds.toList())
                             }
                         },
                         onTagsChanged = { pId, sIds ->
@@ -86,7 +88,9 @@ class MainActivity : ComponentActivity() {
                             selSecondaryTagIds = sIds.toSet()
                         },
                         onCreateSecondaryTag = { name ->
-                            db.tagDao().insertSecondaryTag(SecondaryTagEntity(name = name))
+                            val newId = db.tagDao().insertSecondaryTag(SecondaryTagEntity(name = name))
+                            secondaryTags = secondaryTags + SecondaryTagEntity(id = newId, name = name)
+                            newId
                         },
                     )
                 }
