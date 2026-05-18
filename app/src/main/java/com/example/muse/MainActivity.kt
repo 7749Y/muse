@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
                 val repository = remember { DocumentRepository(db) }
                 val scope = rememberCoroutineScope()
                 var primaryTags by remember { mutableStateOf(emptyList<PrimaryTagEntity>()) }
+                var secondaryTags by remember { mutableStateOf(emptyList<SecondaryTagEntity>()) }
                 var loaded by remember { mutableStateOf(false) }
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
                 var previousScreen by remember { mutableStateOf<Screen>(Screen.Home) }
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
                         ))
                     }
                     primaryTags = db.tagDao().getAllPrimaryTagsOnce()
+                    secondaryTags = db.tagDao().getAllSecondaryTagsOnce()
                     loaded = true
                 }
 
@@ -105,6 +107,7 @@ class MainActivity : ComponentActivity() {
                             initialModules = editModules,
                             initialTitle = editTitle,
                             primaryTags = primaryTags,
+                            secondaryTags = secondaryTags,
                             selectedPrimaryTagId = selPrimaryTagId,
                             selectedSecondaryTagIds = selSecondaryTagIds,
                             onBackClick = {
@@ -130,14 +133,26 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             onTagsChanged = { pId, sIds ->
+                                scope.launch {
+                                    db.documentDao().updatePrimaryTag(editDocumentId, pId)
+                                    repository.saveDocumentSecondaryTags(editDocumentId, sIds)
+                                }
                                 selPrimaryTagId = pId
                                 selSecondaryTagIds = sIds.toSet()
                             },
                             onCreateSecondaryTag = { name ->
-                                val newId = db.tagDao().insertSecondaryTag(
-                                    SecondaryTagEntity(name = name)
-                                )
-                                newId
+                                val existing = secondaryTags.find {
+                                    it.name.equals(name, ignoreCase = true)
+                                }
+                                if (existing != null) {
+                                    existing.id
+                                } else {
+                                    val newId = db.tagDao().insertSecondaryTag(
+                                        SecondaryTagEntity(name = name)
+                                    )
+                                    secondaryTags = secondaryTags + SecondaryTagEntity(id = newId, name = name)
+                                    newId
+                                }
                             },
                         )
                     }
