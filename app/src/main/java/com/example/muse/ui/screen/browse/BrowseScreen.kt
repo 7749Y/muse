@@ -3,6 +3,7 @@ package com.example.muse.ui.screen.browse
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,7 @@ fun BrowseScreen(
     title: String = "",
     articles: List<DocumentPreview> = emptyList(),
     onBackClick: () -> Unit = {},
+    onArticleClick: (documentId: Long) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -122,6 +124,7 @@ fun BrowseScreen(
                             title = article.title,
                             description = article.description,
                             tags = article.secondaryTags.map { it.name },
+                            onClick = { onArticleClick(article.documentId) },
                         )
                     }
                 }
@@ -152,6 +155,7 @@ private fun EntryCard(
     title: String,
     description: String,
     tags: List<String>,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -159,6 +163,7 @@ private fun EntryCard(
             .fillMaxWidth()
             .border(1.dp, Color(0xFF444444), RoundedCornerShape(8.dp))
             .background(Color(0xFF1E1E1E), RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
             .padding(24.dp)
     ) {
         Column {

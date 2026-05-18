@@ -137,9 +137,9 @@ fun EditScreen(
     onTagsChanged: (primaryTagId: Long?, secondaryTagIds: List<Long>) -> Unit = { _, _ -> },
     onCreateSecondaryTag: suspend (String) -> Long = { 0L },
 ) {
-    val focusManager = LocalFocusManager.current
+    var focusManager = LocalFocusManager.current
     var editingConfig by remember { mutableStateOf<EditorConfig?>(null) }
-    var modules by remember { mutableStateOf(initialModules) }
+    var modules by remember(initialModules) { mutableStateOf(initialModules) }
     var titleText by remember(initialTitle) { mutableStateOf(initialTitle) }
     var editingSubHeadingIndex by remember { mutableStateOf<Int?>(null) }
     var isEditingTitle by remember { mutableStateOf(false) }
@@ -149,6 +149,12 @@ fun EditScreen(
     var showTableMatrix by remember { mutableStateOf(false) }
     var editingModuleIndex by remember { mutableIntStateOf(-1) }
     var showTagDialog by remember { mutableStateOf(false) }
+
+    val isDirty by remember {
+        derivedStateOf {
+            modules != initialModules || titleText != initialTitle
+        }
+    }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetMultipleContents(),
@@ -272,18 +278,22 @@ fun EditScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                IconButton(
-                    onClick = {
-                        focusManager.clearFocus()
-                        onSaveClick(modules, titleText)
-                    },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_check),
-                        contentDescription = "Save",
-                        tint = Color.White
-                    )
+                if (isDirty) {
+                    IconButton(
+                        onClick = {
+                            focusManager.clearFocus()
+                            onSaveClick(modules, titleText)
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_check),
+                            contentDescription = "Save",
+                            tint = Color.White
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.size(48.dp))
                 }
             }
 
